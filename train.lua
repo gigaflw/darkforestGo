@@ -25,7 +25,7 @@ require 'train.rl_framework.infra.agent'
 
 local tnt = require 'torchnet'
 
--- cutorch.setDevice(3)
+cutorch.setDevice(3)
 
 -- Build simple models.
 function build_policy_model(opt)

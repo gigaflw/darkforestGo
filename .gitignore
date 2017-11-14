@@ -5,3 +5,12 @@
 models
 test_playout_multithread
 cnnPlayerV2/game-*.sgf
+dataset/
+
+# IDE
+.idea/
+CMakeLists.txt
+
+# others
+.DS_Store/
+

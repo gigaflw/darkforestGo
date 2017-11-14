@@ -5,7 +5,7 @@
 -- This source code is licensed under the BSD-style license found in the
 -- LICENSE file in the root directory of this source tree. An additional grant 
 -- of patent rights can be found in the PATENTS file in the same directory.
--- 
+--
 
 local utils
 local common = require("common.common")
@@ -37,6 +37,7 @@ function dcnn_utils.init(options)
 
     if opt.usecpu == nil or opt.usecpu == false then
         utils = require 'utils.utils'
+        utils.require_torch()
         utils.require_cutorch()
     else
         g_nnutils_only_cpu = true

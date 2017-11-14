@@ -1,0 +1,35 @@
+--
+-- Created by HgS_1217_
+-- Date: 2017/11/11
+--
+
+package.path = package.path .. ';../?.lua'
+
+local self_play = require("rl_network.self_play")
+local dcnn_utils = require("board.dcnn_utils")
+local board = require("board.board")
+local pl = require 'pl.import_into'()
+
+local opt = pl.lapp[[
+    --codename             (default "darkfores2")   Code name for models. If this is not empty then --input will be omitted.
+    -f,--feature_type      (default "old")       By default we only rl_network old features. If codename is specified, this is omitted.
+    -r,--rank              (default "9d")        We play in the level of rank.
+    --use_local_model                            Whether we just load local model from the current path
+    --komi                 (default 7.5)         The komi we used
+    --handi                (default 0)           The handicap stones we placed.
+    -c,--usecpu                                  Whether we use cpu to run the program.
+    --shuffle_top_n        (default 300)         We random choose one of the first n move and play it.
+    --debug                                      Wehther we use debug mode
+    --num_games            (default 10)          The number of games to be played.
+    --sample_step          (default -1)          Sample at a particular step.
+    --presample_codename   (default "darkfores1")
+    --presample_ft         (default "old")
+    --copy_path            (default "")
+]]
+
+-- opt.feature_type and opt.rank are necessary for the game to be played.
+local dcnn_opt = dcnn_utils.init(opt)
+
+local b = board.new()
+
+self_play.train(b, dcnn_opt, opt)
