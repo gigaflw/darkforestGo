@@ -13,7 +13,7 @@ local pl = require 'pl.import_into'()
 local dcnn_utils = require 'board.dcnn_utils'
 local opt = pl.lapp[[
     --codename             (default "darkfores2") Code name for models.
-    -f,--feature_type      (default "old")       By default we only test old features. If codename is specified, this is omitted.
+    -f,--feature_type      (default "old")       By default we only rl_network old features. If codename is specified, this is omitted.
     -r,--rank              (default "9d")        We play in the level of rank.
     --use_local_model                            Whether we just load local model from the current path
     -c,--usecpu                                  Whether we use cpu to run the program.

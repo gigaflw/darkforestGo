@@ -569,6 +569,6 @@ function sgfloader.sgf_string(header, moves)
     return s
 end
 
--- test.
--- print(sgf.parse(io.open("test.sgf"):read("*a")))
+-- rl_network.
+-- print(sgf.parse(io.open("rl_network.sgf"):read("*a")))
 return sgfloader

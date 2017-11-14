@@ -24,7 +24,7 @@ parameter updates. It also operates as a coroutine allowing a user control
 
 Accordingly, `train` requires a network (nn.Module), a criterion expressing the
 loss function (nn.Criterion), a dataset iterator (tnt.DatasetIterator), and a
-learning rate, at the minimum. The `test` function allows for simple evaluation
+learning rate, at the minimum. The `rl_network` function allows for simple evaluation
 of a model on a dataset.
 
 A `state` is maintained for external access to outputs and parameters of modules

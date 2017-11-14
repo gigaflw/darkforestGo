@@ -181,7 +181,7 @@ Simple GPU-based server. Communication with search threads via pipe.
 * `./utils`
 Simple utilities, e.g., read/write sgf files.
 
-* `./test`
+* `./rl_network`
 Test utilities.
 
 * `./train`

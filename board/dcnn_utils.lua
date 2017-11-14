@@ -81,6 +81,64 @@ function dcnn_utils.init(options)
     return opt
 end
 
+function dcnn_utils.rl_init(options)
+    -- opt.feature_type and opt.userank are necessary for the game to be played.
+    local opt = pl.tablex.deepcopy(options)
+    opt.sample_step = opt.sample_step or -1
+    opt.temperature = opt.temperature or 1
+    opt.shuffle_top_n = opt.shuffle_top_n or 1
+    opt.rank = opt.rank or '9d'
+
+    if opt.usecpu == nil or opt.usecpu == false then
+        utils = require 'utils.utils'
+        utils.require_torch()
+        utils.require_cutorch()
+    else
+        g_nnutils_only_cpu = true
+        utils = require 'utils.utils'
+    end
+
+    opt.userank = true
+    assert(opt.shuffle_top_n >= 1)
+
+    opt.attention = { 1, 1, common.board_size, common.board_size }
+
+
+
+    opt.input1, opt.input2 = (opt.codename == "" and opt.input or common.codenames[opt.codename1].model_name),
+                             (opt.codename == "" and opt.input or common.codenames[opt.codename2].model_name)
+    opt.feature_type = (opt.codename == "" and opt.feature_type or common.codenames[opt.codename].feature_type)
+
+
+    local model_name = opt.use_local_model and pl.path.basename(opt.input) or opt.input
+    if opt.verbose then print("Load model " .. model_name) end
+    local model = torch.load(model_name)
+    if opt.verbose then print("Load model complete") end
+
+    local preSampleModel
+    local preSampleOpt = pl.tablex.deepcopy(opt)
+
+    if opt.temperature > 1 then
+        if opt.verbose then print("temperature: " , opt.temperature) end
+        preSampleModel = goutils.getDistillModel(model, opt.temperature)
+    elseif opt.presample_codename ~= nil and opt.presample_codename ~= false then
+        local code = common.codenames[opt.presample_codename]
+        if opt.verbose then print("Load preSampleModel " .. code.model_name) end
+        preSampleModel = torch.load(code.model_name)
+        preSampleOpt.feature_type = code.feature_type
+    else
+        preSampleModel = model
+    end
+
+    opt.preSampleModel = preSampleModel
+    opt.preSampleOpt = preSampleOpt
+    opt.model = model
+    if opt.valueModel and opt.valueModel ~= "" then opt.valueModel = torch.load(opt.valueModel) end
+    if opt.verbose then print("dcnn ready!") end
+
+    return opt
+end
+
 function dcnn_utils.dbg_set()
     utils.dbg_set()
 end

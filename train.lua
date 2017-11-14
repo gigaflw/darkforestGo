@@ -45,7 +45,7 @@ local opt = pl.lapp[[
     --num_forward_models  (default 4096)       Number of forward models.
     --progress                                 Whether to print the progress
     --epoch_size          (default 12800)      Epoch size
-    --epoch_size_test     (default 128000)      Epoch size for test.
+    --epoch_size_test     (default 128000)      Epoch size for rl_network.
     --data_augmentation                        Whether to use data_augmentation
 
     --nGPU                (default 1)          Number of GPUs to use.

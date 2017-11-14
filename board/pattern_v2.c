@@ -910,7 +910,7 @@ BOOL heap_add_prior(BoardExtra *h, Coord c, int w_type, int w_offset, BOOL creat
   if (heap_idx == 0) {
     if (create_new) {
       double logprob = 0.0;
-      // logprob remains 0.0 if cnt does not pass the test.
+      // logprob remains 0.0 if cnt does not pass the rl_network.
       get_log_prob(h, c, &logprob);
 
       heap_add(h, c, logprob);

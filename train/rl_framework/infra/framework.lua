@@ -138,9 +138,9 @@ function framework.run_rl(agent, callbacks, opt)
 
     -- require 'fb.debugger'.enter()
 
-    -- training/test set
+    -- training/rl_network set
     local train_dataset = build_dataset(thread_init, fm_init, fm_gen, fm_postprocess, bundle, "train", opt.epoch_size, opt)
-    local test_dataset = build_dataset(thread_init, fm_init, fm_gen, fm_postprocess, bundle, "test", opt.epoch_size_test, opt)
+    local test_dataset = build_dataset(thread_init, fm_init, fm_gen, fm_postprocess, bundle, "rl_network", opt.epoch_size_test, opt)
 
     if not callbacks.checkpoint_filename then
         callbacks.checkpoint_filename = function(state, err)
@@ -171,7 +171,7 @@ function framework.run_rl(agent, callbacks, opt)
     if not callbacks.print then
         callbacks.print = function(timer, state, train_err_str, test_err_str)
             local t_str = os.date("%c", os.time())
-            print(string.format('| %s | epoch %04d | ms/batch %3d | train %s | test %s | saved %s',
+            print(string.format('| %s | epoch %04d | ms/batch %3d | train %s | rl_network %s | saved %s',
                       t_str, state.epoch, timer:value()*1000, train_err_str, test_err_str, state.model_saved and "*" or ""))
             io.flush()
         end
@@ -241,12 +241,12 @@ function framework.run_rl(agent, callbacks, opt)
         end
     end
 
-    -- test loop
+    -- rl_network loop
     local function testeval(agent, iterator)
         local testengine = rl.Engine()
 
         function testengine.hooks.onStart(state)
-            state.signature = "test"
+            state.signature = "rl_network"
         end
 
         testengine.hooks.onSample = engine.hooks.onSample
@@ -271,7 +271,7 @@ function framework.run_rl(agent, callbacks, opt)
         timer:stop()
         if callbacks.onEndEpoch then callbacks.onEndEpoch(state) end
 
-        -- test
+        -- rl_network
         print("Start testing...")
         local test_state = testeval(agent, test_dataset)
         local test_aver_loss, test_err_str = compute_aver_loss(test_state)

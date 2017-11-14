@@ -23,7 +23,7 @@ local board = require 'board.board'
 
 local opt = pl.lapp[[
     -i,--input             (default "./models/df2.bin")          Input CNN models.
-    -f,--feature_type      (default "old")                       By default we only test old features:
+    -f,--feature_type      (default "old")                       By default we only rl_network old features:
     -r,--rank              (default "9d")                        We play in the level of rank.
     -c,--usecpu                                                  Whether we use cpu to run the program.
 ]]

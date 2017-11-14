@@ -83,7 +83,7 @@ three_liberty_suicide(Board *b, group_t g, Stone color, Coord to, struct selfata
 		fprintf(stderr, "3-lib danger\n");
   */
 
-	/* Therefore, the final suicidal test is: (After filling this
+	/* Therefore, the final suicidal rl_network is: (After filling this
 	 * liberty,) when opponent fills liberty [0], playing liberty
 	 * [1] will not help the group, or vice versa. */
 	bool other_libs_neighbors = NEIGHBOR4(other_libs[0], other_libs[1]);
@@ -449,7 +449,7 @@ check_throwin(Board *b, Stone color, Coord to, struct selfatari_state *s)
 
 		assert(g_pt->liberties <= 2);
 		/* Suicide is definitely NOT ok, no matter what else
-		 * we could test. */
+		 * we could rl_network. */
 		if (g_pt->liberties == 1)
 			return true;
 

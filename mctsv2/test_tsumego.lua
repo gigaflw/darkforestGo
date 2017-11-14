@@ -17,7 +17,7 @@ local playout = require 'mctsv2.playout_multithread'
 local pl = require 'pl.import_into'()
 
 -- Tsumego example
--- local example1 = '/home/yuandong/test/tsumego-1.sgf' 
+-- local example1 = '/home/yuandong/rl_network/tsumego-1.sgf'
 local solver = { } 
 
 -- opt: verbose, json_filename
@@ -129,8 +129,8 @@ playout.tree_params.online_model_alpha = 0.0001
 playout.tree_params.num_tree_thread = 64 
 
 local tr = playout.new(num_rollout)
--- local sgf_list = '/home/yuandong/test/tsumego/tsumego.lst' 
-local sgf_list = '/home/yuandong/test/tsumego/tsumego_sample.lst' 
+-- local sgf_list = '/home/yuandong/rl_network/tsumego/tsumego.lst'
+local sgf_list = '/home/yuandong/rl_network/tsumego/tsumego_sample.lst'
 local dirname = pl.path.dirname(sgf_list)
 local lines = pl.utils.readlines(sgf_list)
 

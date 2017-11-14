@@ -118,7 +118,7 @@ end
 
 local opt = pl.lapp[[
     --codename             (default "df2_cpu")   Code name for models. If this is not empty then --input will be omitted.
-    -f,--feature_type      (default "old")       By default we only test old features. If codename is specified, this is omitted.
+    -f,--feature_type      (default "old")       By default we only rl_network old features. If codename is specified, this is omitted.
     -r,--rank              (default "9d")        We play in the level of rank.
     --use_local_model                            Whether we just load local model from the current path
     --komi                 (default 7.5)         The komi we used

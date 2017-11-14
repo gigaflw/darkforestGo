@@ -15,7 +15,7 @@ local common = require("common.common")
 local tg = require 'tsumego.solver'
 
 -- Tsumego example
-local example1 = '/home/yuandong/test/tsumego-1.sgf' 
+local example1 = '/home/yuandong/rl_network/tsumego-1.sgf'
 local game = sgf.parse(io.open(example1):read("*a"))
 
 local sgf_play = { } 

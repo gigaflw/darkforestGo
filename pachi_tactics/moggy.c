@@ -843,7 +843,7 @@ playout_moggy_permit(struct playout_policy *p, Board *b, struct move *m)
   bool selfatari;
 	if (p->rand_func(p->context, 100) >= pp->selfatarirate) {
 		if (PLDEBUGL(5))
-			fprintf(stderr, "skipping sar test\n");
+			fprintf(stderr, "skipping sar rl_network\n");
 		goto sar_skip;
 	}
 	selfatari = is_bad_selfatari(b, m->color, m->coord);
@@ -876,7 +876,7 @@ sar_skip:
   BOOL eyefill;
 	if (p->rand_func(p->context, 100) >= pp->eyefillrate) {
 		if (PLDEBUGL(5))
-			fprintf(stderr, "skipping eyefill test\n");
+			fprintf(stderr, "skipping eyefill rl_network\n");
 		goto eyefill_skip;
 	}
 	eyefill = board_is_eyelike(b, m->coord, m->color);
