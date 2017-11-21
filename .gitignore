@@ -14,5 +14,4 @@ rl_network/sgf2gif
 CMakeLists.txt
 
 # others
-.DS_Store/
-
+.DS_Store
