@@ -35,4 +35,4 @@ local dcnn_opt1, dcnn_opt2 = dcnn_utils.rl_init(opt)
 
 local b = board.new()
 
-self_play.train(b, dcnn_opt, opt)
+self_play.train(b, dcnn_opt1, dcnn_opt2, opt)
