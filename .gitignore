@@ -7,7 +7,7 @@ models
 test_playout_multithread
 cnnPlayerV2/game-*.sgf
 dataset/
-rl_network/sgf2gif
+rl_network/sgf2gif/
 
 # IDE
 .idea/
