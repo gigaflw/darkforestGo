@@ -23,13 +23,15 @@ local opt = pl.lapp[[
     --debug                                         Wehther we use debug mode
     --num_games            (default 10)             The number of games to be played.
     --sample_step          (default -1)             Sample at a particular step.
-    --presample_codename   (default "darkfores2")
+    --presample_codename1  (default "darkfores2")
+    --presample_codename2  (default "darkfores1")
     --presample_ft         (default "old")
     --copy_path            (default "")
 ]]
 
 -- opt.feature_type and opt.rank are necessary for the game to be played.
-local dcnn_opt = dcnn_utils.init(opt)
+--local dcnn_opt = dcnn_utils.init(opt)
+local dcnn_opt1, dcnn_opt2 = dcnn_utils.rl_init(opt)
 
 local b = board.new()
 

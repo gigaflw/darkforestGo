@@ -103,40 +103,63 @@ function dcnn_utils.rl_init(options)
 
     opt.attention = { 1, 1, common.board_size, common.board_size }
 
+    local opt1, opt2 = pl.tablex.deepcopy(opt), pl.tablex.deepcopy(opt)
 
+    opt1.input = (opt.codename == "" and opt.input or common.codenames[opt.codename1].model_name)
+    opt2.input = (opt.codename == "" and opt.input or common.codenames[opt.codename2].model_name)
 
-    opt.input1, opt.input2 = (opt.codename == "" and opt.input or common.codenames[opt.codename1].model_name),
-                             (opt.codename == "" and opt.input or common.codenames[opt.codename2].model_name)
-    opt.feature_type = (opt.codename == "" and opt.feature_type or common.codenames[opt.codename].feature_type)
+    opt1.feature_type = opt.codename == "" and opt.feature_type or common.codenames[opt.codename1].feature_type
+    opt2.feature_type = opt.codename == "" and opt.feature_type or common.codenames[opt.codename2].feature_type
 
+    local model_name1 = opt.use_local_model and pl.path.basename(opt1.input) or opt1.input
+    local model_name2 = opt.use_local_model and pl.path.basename(opt2.input) or opt2.input
 
-    local model_name = opt.use_local_model and pl.path.basename(opt.input) or opt.input
-    if opt.verbose then print("Load model " .. model_name) end
-    local model = torch.load(model_name)
-    if opt.verbose then print("Load model complete") end
+    if opt.verbose then print("Load model 1 " .. model_name1) end
+    local model1 = torch.load(model_name1)
+    if opt.verbose then print("Load model 1 complete") end
 
-    local preSampleModel
-    local preSampleOpt = pl.tablex.deepcopy(opt)
+    if opt.verbose then print("Load model 2 " .. model_name2) end
+    local model2 = torch.load(model_name2)
+    if opt.verbose then print("Load model 2 complete") end
+
+    local preSampleModel1, preSampleModel2
+    local preSampleOpt1, preSampleOpt2 = pl.tablex.deepcopy(opt1), pl.tablex.deepcopy(opt2)
 
     if opt.temperature > 1 then
         if opt.verbose then print("temperature: " , opt.temperature) end
-        preSampleModel = goutils.getDistillModel(model, opt.temperature)
-    elseif opt.presample_codename ~= nil and opt.presample_codename ~= false then
-        local code = common.codenames[opt.presample_codename]
-        if opt.verbose then print("Load preSampleModel " .. code.model_name) end
-        preSampleModel = torch.load(code.model_name)
-        preSampleOpt.feature_type = code.feature_type
+        preSampleModel1 = goutils.getDistillModel(model1, opt.temperature)
+        preSampleModel2 = goutils.getDistillModel(model2, opt.temperature)
     else
-        preSampleModel = model
+        if opt.presample_codename1 ~= nil and opt.presample_codename1 ~= false then
+            local code = common.codenames[opt.presample_codename1]
+            if opt.verbose then print("Load preSampleModel 1 " .. code.model_name) end
+            preSampleModel1 = torch.load(code.model_name)
+            preSampleOpt1.feature_type = code.feature_typ
+        else
+            preSampleModel1 = model1
+        end
+
+        if opt.presample_codename2 ~= nil and opt.presample_codename2 ~= false then
+            local code = common.codenames[opt.presample_codename2]
+            if opt.verbose then print("Load preSampleModel 2 " .. code.model_name) end
+            preSampleModel2 = torch.load(code.model_name)
+            preSampleOpt2.feature_type = code.feature_typ
+        else
+            preSampleModel2 = model2
+        end
     end
 
-    opt.preSampleModel = preSampleModel
-    opt.preSampleOpt = preSampleOpt
-    opt.model = model
-    if opt.valueModel and opt.valueModel ~= "" then opt.valueModel = torch.load(opt.valueModel) end
+    opt1.preSampleModel, opt2.preSampleModel = preSampleModel1, preSampleModel2
+    opt1.preSampleOpt, opt2.preSampleOpt = preSampleOpt1, preSampleOpt2
+    opt1.model, opt2.model = model1, model2
+    if opt.valueModel and opt.valueModel ~= "" then
+        opt1.valueModel = torch.load(opt.valueModel)
+        opt2.valueModel = torch.load(opt.valueModel)
+    end
+
     if opt.verbose then print("dcnn ready!") end
 
-    return opt
+    return opt1, opt2
 end
 
 function dcnn_utils.dbg_set()

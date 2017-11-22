@@ -44,7 +44,7 @@ function self_play.check_resign(b, opt)
     return resign_side, score, min_score, max_score
 end
 
-function self_play.play_one_game(b, dcnn_opt, opt)
+function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
     -- One game of self play.
     local moves = {}
     while true do
@@ -72,6 +72,7 @@ function self_play.play_one_game(b, dcnn_opt, opt)
         end
 
         -- Generate move
+        local dcnn_opt = b._next_player == common.black and dcnn_opt1 or dcnn_opt2
         local x, y = dcnn_utils.sample(dcnn_opt, b, b._next_player)
 
         if x == nil then
@@ -103,12 +104,12 @@ function self_play.play_one_game(b, dcnn_opt, opt)
     }
 end
 
-function self_play.train(b, dcnn_opt, opt)
+function self_play.train(b, dcnn_opt1, dcnn_opt2, opt)
     for i = 1, opt.num_games do
         print(string.format("Play game: %d/%d", i, opt.num_games))
         board.clear(b)
         local sample_step = math.random(390)
-        local res = self_play.play_one_game(b, dcnn_opt, opt)
+        local res = self_play.rplay_one_game(b, dcnn_opt1, dcnn_opt2, opt)
         if #res.moves <= sample_step then
             print(string.format("Bad sample --- moves: %d, sample_step: %d", #res.moves, sample_step))
         else
@@ -129,8 +130,8 @@ function self_play.train(b, dcnn_opt, opt)
             local date = utils.get_current_date()
             local header = {
                 result = re,
-                player_b = opt.codename,
-                player_w = opt.codename,
+                player_b = opt.codename1,
+                player_w = opt.codename2,
                 date = date,
                 komi = opt.komi
             }
