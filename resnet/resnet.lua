@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-21 20:09:25
+-- @Last Modified time: 2017-11-22 15:45:02
 
 local nn = require 'nn'
 
@@ -85,7 +85,3 @@ local function createModel()
 end
 
 return createModel
--- model = createModel()
--- fake = torch.rand(1, 17, 19, 19)
--- ret = model:forward(fake)
-
