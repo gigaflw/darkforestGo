@@ -109,7 +109,7 @@ function self_play.train(b, dcnn_opt1, dcnn_opt2, opt)
         print(string.format("Play game: %d/%d", i, opt.num_games))
         board.clear(b)
         local sample_step = math.random(390)
-        local res = self_play.rplay_one_game(b, dcnn_opt1, dcnn_opt2, opt)
+        local res = self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
         if #res.moves <= sample_step then
             print(string.format("Bad sample --- moves: %d, sample_step: %d", #res.moves, sample_step))
         else
