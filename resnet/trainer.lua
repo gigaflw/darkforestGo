@@ -1,14 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-23 13:57:20
-
-require 'optim'
-
-local resnet = require 'resnet.resnet'
-local get_dataloader = require 'resnet.dataloader'
-
-get_shape_str = function (obj) return table.concat((#obj):totable(), ' x ') end
+-- @Last Modified time: 2017-11-23 14:41:18
 
 local meta = {}
 local Trainer = torch.class('resnet.Trainer', meta)
@@ -18,8 +11,9 @@ function Trainer:__init(net, crit, optim, optim_config)
     self.crit = crit
     self.optim = optim
     self.optim_config = optim_config
-    self.ALL_PARAM, self.ALL_PARAM_GRAD = net:getParameters()
-    print(string.format("The network has %s trainable parameters", get_shape_str(self.ALL_PARAM)))
+    self.all_params, self.all_params_grad = net:getParameters()
+     -- all_params_grad will store d(loss)/d(all parameters)
+    print(string.format("The network has %d trainable parameters", (#self.all_params)[1]))
 end
 
 function Trainer:train(dataloader, max_batches)
@@ -30,6 +24,8 @@ function Trainer:train(dataloader, max_batches)
         labels = {labels.a, labels.z} -- array is needed for training
         
         batch_loss = self:step(inputs, labels)[1]
+        -- (just 1 value for the SGD optimization)
+        -- FIXME: non-sgd optimzier not supported yet
         
         batches = batches + 1
         total_loss = total_loss + batch_loss
@@ -48,34 +44,12 @@ function Trainer:step(inputs, labels)
         local loss_grad = self.crit:backward(self.net.output, labels)
         self.net:backward(inputs, loss_grad)
 
-        return loss, self.ALL_PARAM_GRAD -- ALL_PARAM_GRAD is d(loss)/d(all parameters)
+        return loss, self.all_params_grad
     end  
 
-    local _, batch_loss = self.optim(eval, self.ALL_PARAM, self.optim_config)
-    -- losses is a table containing value of the loss function  
-    -- (just 1 value for the SGD optimization)  
+    local _, batch_loss = self.optim(eval, self.all_params, self.optim_config)
+    -- loss is a table containing values of the loss function  
     return batch_loss
 end
 
-local opt = {
-    data_augmentation = false,
-    batch_size = 24,
-    max_batches = 20
-}
-
-local sgd_config = {
-  learningRate = 1e-2,  
-  learningRateDecay = 1e-4,  
-  weightDecay = 1e-3,  
-  momentum = 1e-4  
-} -- these key names should not be changed
-
-
-net = resnet.create_model()
-crit = resnet.create_criterion()
-
-dataloader = get_dataloader('test', opt.batch_size)
-dataloader.load_game(1)
-
-trainer = meta.Trainer(net, crit, optim.sgd, sgd_config)
-trainer:train(dataloader, opt.max_batches)
+return meta.Trainer

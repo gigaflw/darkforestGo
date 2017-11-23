@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:22:02
+-- @Last Modified time: 2017-11-24 16:22:47
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
@@ -15,7 +15,7 @@ local argcheck = require 'argcheck'
 -----------------------
 -- Feature & Label Extraction
 -----------------------
-local get_features = argcheck{
+local board_to_features = argcheck{
     help = [[
         Given a 19x19 board and the current player
         extracts 17 feature planes
@@ -67,7 +67,7 @@ local get_input_n_label = argcheck{
         assert(moveIdx > 0 and moveIdx <= 19 * 19 + 1)
 
         return {
-          s = get_features(board, player),
+          s = board_to_features(board, player),
           a = moveIdx,
           z = game:get_result_enum() == player and 1 or -1, -- FIXME: what if a tie?
         }
@@ -77,6 +77,9 @@ local get_input_n_label = argcheck{
 -- Feature & Label Ends
 -----------------------
 
+-----------------------
+-- Dataloader
+-----------------------
 get_dataloader = argcheck{
     help = [[
         bridge the sgf dataset and the inputs and labels required by network training
@@ -101,6 +104,9 @@ get_dataloader = argcheck{
         local game_idx = 0
         local board = CBoard.new()
 
+        -----------------------
+        -- loading games
+        -----------------------
         local function load_game(idx)
             local content = dataset:get(idx)[name].table.content
             game_idx = idx
@@ -115,6 +121,14 @@ get_dataloader = argcheck{
         local function load_random_game() return load_game(math.random(dataset:size())) end
         local function load_next_game() return load_game(game_idx < dataset:size() and game_idx + 1 or 1) end
 
+        -----------------------
+        -- iterator interface
+        -----------------------
+        -- reusing tensors to save memory
+        local s = torch.FloatTensor(batch_size, 17, 19, 19)
+        local a = torch.IntTensor(batch_size)
+        local z = torch.FloatTensor(batch_size)
+
         local function _parse_next_position()
             if game.ply >= game:num_round() then load_next_game() end
             game.ply = game.ply + 1
@@ -126,12 +140,6 @@ get_dataloader = argcheck{
 
             return get_input_n_label(board, game)
         end
-
-
-        -- reusing tensors to save memory
-        local s = torch.FloatTensor(batch_size, 17, 19, 19)
-        local a = torch.IntTensor(batch_size)
-        local z = torch.FloatTensor(batch_size)
 
         local function _iter_batch(max_batches, ind)
             ind = ind + 1
