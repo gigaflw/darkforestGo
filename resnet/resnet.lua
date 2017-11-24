@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:24:06
+-- @Last Modified time: 2017-11-24 16:24:46
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -13,8 +13,9 @@ local ReLU = nn.ReLU
 local Linear = nn.Linear
 local BatchNorm = nn.SpatialBatchNormalization
 
-local function create_model()
-    local nResiudalBlocks = 3 -- 19 or 39 according to the thesis
+local function create_model(opt)
+    assert(opt.n_residual_blocks, "ResNet: No opt.n_residual_blocks assigned")
+    local n_residual_blocks = opt.n_residual_blocks -- 19 or 39 according to the thesis
 
     ---------------------------
     -- Residual Block & Tower
@@ -40,9 +41,9 @@ local function create_model()
     -- Creates count residual blocks with specified number of features
     -- in: batch_size x 19 x 19 x 256
     -- out: batch_size x 19 x 19 x 256, identical shape
-    local function residualTower(nResiudalBlocks)
+    local function residualTower(n_residual_blocks)
         local s = nn.Sequential()
-        for i= 1, nResiudalBlocks do
+        for i= 1, n_residual_blocks do
             s:add(residualBlock(features, i == 1 and stride or 1))
         end
         return s
@@ -79,7 +80,7 @@ local function create_model()
         :add(Conv(17, 256, 3, 3, 1, 1, 1, 1)) -- batch_size x 256 x 19 x 19
         :add(BatchNorm(256))
         :add(ReLU(true))
-        :add(residualTower(nResiudalBlocks))
+        :add(residualTower(n_residual_blocks))
         :add(nn.ConcatTable()
             :add(policyHead())
             :add(valueHead()))

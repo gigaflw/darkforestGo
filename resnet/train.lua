@@ -1,32 +1,45 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:23:36
+-- @Last Modified time: 2017-11-24 16:24:54
+
+doc = [[
+    The following script should always be the entrance of the training procedure
+]]
+
+local pl = require 'pl.import_into'()
+local opt = pl.lapp[[
+    ** Training Options  **
+    --batch_size            (default 24)         The number of positions in each batch
+    --max_batches           (default 20)         The number of batches in each epoch
+    --epoches               (default 10)         The number of epoches
+    --epoch_per_display     (default 1)          The number of epoches per displaying result
+
+    ** Network Options  **
+    --n_residual_blocks     (default 3)          The number of residual blocks in the resnet, 19 or 39 according to the thesis
+    
+    ** Optimizer Options  **
+    ** optimizer opt depends on the type of the optimizer, change them in the hard-coded <optim>-opt **
+]]
+-- TODO: checkpoints
+
+local sgd_opt = {
+  learningRate = 1,  
+  learningRateDecay = 1e-4,
+  weightDecay = 1e-3,
+  momentum = 1e-4
+} -- these key names are in camel-case because torch.optim library require them to be so
 
 local resnet = require 'resnet.resnet'
 local get_dataloader = require 'resnet.dataloader'
 local Trainer = require 'resnet.trainer'
 
-local opt = {
-    data_augmentation = false,
-    batch_size = 24,
-    max_batches = 20
-}
+local net = resnet.create_model(opt)
+local crit = resnet.create_criterion()
 
-local sgd_config = {
-  learningRate = 1,  
-  learningRateDecay = 1e-4,
-  weightDecay = 1e-3,
-  momentum = 1e-4
-} -- these key names should not be changed
-
-
-net = resnet.create_model()
-crit = resnet.create_criterion()
-
-dataloader = get_dataloader('test', opt.max_batches)
-dataloader.load_game(1)
+local dataloader = get_dataloader('test', opt.batch_size)
+dataloader.load_random_game()
 
 require 'optim'
-trainer = Trainer(net, crit, optim.sgd, sgd_config)
-trainer:train(dataloader, opt.max_batches)
+local trainer = Trainer(net, crit, optim.sgd, sgd_opt, opt)
+trainer:train(dataloader)
