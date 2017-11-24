@@ -1,9 +1,11 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:22:19
+-- @Last Modified time: 2017-11-24 16:23:56
 
 local nn = require 'nn'
+
+torch.setdefaulttensortype('torch.FloatTensor')
 
 local Conv = nn.SpatialConvolution
 local ReLU = nn.ReLU
@@ -70,7 +72,7 @@ local function create_model()
     end
 
     ---------------------------
-    --  The ResNet ImageNet model
+    --  The ResNet model
     ---------------------------
     local model = nn.Sequential()
         :add(Conv(17, 256, 3, 3, 1, 1, 1, 1)) -- batch_size x 256 x 19 x 19
@@ -94,14 +96,6 @@ local function create_criterion()
     return nn.ParallelCriterion()
         :add(nn.CrossEntropyCriterion())
         :add(nn.MSECriterion())  
-end
-
-local function _test()
-    crit = create_criterion()
-
-    fake = torch.rand(2, 17, 19, 19)
-    p, v = table.unpack(model:forward(fake))
-    print(#p)
 end
 
 return {

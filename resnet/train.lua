@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:23:24
+-- @Last Modified time: 2017-11-24 16:23:36
 
 local resnet = require 'resnet.resnet'
 local get_dataloader = require 'resnet.dataloader'
@@ -24,7 +24,7 @@ local sgd_config = {
 net = resnet.create_model()
 crit = resnet.create_criterion()
 
-dataloader = get_dataloader('test', opt.batch_size)
+dataloader = get_dataloader('test', opt.max_batches)
 dataloader.load_game(1)
 
 require 'optim'

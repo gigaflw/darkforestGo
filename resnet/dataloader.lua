@@ -1,9 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:22:47
-
-torch.setdefaulttensortype('torch.FloatTensor')
+-- @Last Modified time: 2017-11-24 16:23:48
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -16,23 +14,48 @@ local argcheck = require 'argcheck'
 -- Feature & Label Extraction
 -----------------------
 local board_to_features = argcheck{
-    help = [[
+    doc = [[
         Given a 19x19 board and the current player
         extracts 17 feature planes
-        return a 17 x 19 x 19 tensor
+        return a 17 x 19 x 19 tensor.
+
+        Assume out stones at this time to be X_t (19 x 19), opponent's to be Y_t
+        Then the feature planes: (according to AlphaGo Zero thesis)
+        s_t = [X_t, Y_t, X_{t-1}, Y_{t-1}, ..., X_{t-7}, Y_{t-7}, C]
+        where C is all 1 if we are black, 0 if white.
+
+        Since history info is needed, we need `last_features` to passed into this function
+        changes will be both made in place and returned.
+
+        usage:
+        > a = <some_tensor>
+        > new_a = board_to_features(..., a)
+        > new_a = a -- true
     ]],
     {name='board', type='cdata', help='A `board.board` instance'},
-    {name='player', type='number', help='One of common.black ( = 1 ) or common.white ( = 2 )'},
-    call = function (board, player)
-        local ret = torch.FloatTensor(17, 19, 19)
-        -- TODO: ....
+    {name='player', type='number', help='Current player, one of common.black ( = 1 ) or common.white ( = 2 )'},
+    {name='last_features', type='torch.FloatTensor',
+        help='Feature from last iteration since history info is needed'},
+    call = function (board, player, last_features)
+        ret = last_features or torch.IntTensor(17, 19, 19):zero()
+
+        for i = 16, 4, -2 do
+            ret[i] = ret[i-3]
+            ret[i-1] = ret[i-2]
+        end
+
+        ret[1] = CBoard.get_stones(board, player)
+        ret[2] = CBoard.get_stones(board, CBoard.opponent(player))
+
+        ret:narrow(1, 17, 1):fill(player == common.black and 1 or 0)
+
         return ret
     end
 }
 
 
 local get_input_n_label = argcheck{
-    help = [[
+    doc = [[
         get the input features and corresponding labels of a single play in a game,
         which position is parsed depends on `game.ply` attribute
         return: {
@@ -45,29 +68,31 @@ local get_input_n_label = argcheck{
     ]],
     {name='board', type='cdata', help='A `board.board` instance'},
     {name='game', type='sgfloader', help='A `sgfloader` instance, get by calling `sgf.parse()'},
-    {name='augment', type='boolean', default=false, help='Carry out rotation/reflection on data'},
-    call = function (board, game, augment)
+    {name='last_features', type='torch.FloatTensor', help='Feature from last iteration since history info is needed'},
+    -- {name='augment', type='boolean', default=false, help='Carry out rotation/reflection on data'},
+    call = function (board, game, last_features)
         local x, y, player = sgf.parse_move(game.sgf[game.ply])
-        
         ---------------------
         -- Data Augmentation
+        -- FIXME: can't rotate because resnet uses history stones
         ---------------------
-        local transformStyle = 0
-        if augment then
-            transformStyle = torch.random(0, 7)
-            feature = goutils.rotateTransform(feature, transformStyle)
-        end
-        local x_rot, y_rot = goutils.rotateMove(x, y, transformStyle)
+        -- local transformStyle = 0
+        
+        -- if augment then
+        --     transformStyle = torch.random(0, 7)
+        --     feature = goutils.rotateTransform(feature, transformStyle)
+        -- end
+        -- local x_rot, y_rot = goutils.rotateMove(x, y, transformStyle)
 
         ---------------------
         -- Prepare Move
         ---------------------
         local is_pass = x == 0 and y == 0
-        local moveIdx = is_pass and 19*19+1 or goutils.xy2moveIdx(x_rot, y_rot)
+        local moveIdx = is_pass and 19*19+1 or goutils.xy2moveIdx(x, y)
         assert(moveIdx > 0 and moveIdx <= 19 * 19 + 1)
 
         return {
-          s = board_to_features(board, player),
+          s = board_to_features(board, player, last_features),
           a = moveIdx,
           z = game:get_result_enum() == player and 1 or -1, -- FIXME: what if a tie?
         }
@@ -81,7 +106,7 @@ local get_input_n_label = argcheck{
 -- Dataloader
 -----------------------
 get_dataloader = argcheck{
-    help = [[
+    doc = [[
         bridge the sgf dataset and the inputs and labels required by network training
         usage:
         > d = get_dataloader('test', opt.batch_size)
@@ -99,10 +124,16 @@ get_dataloader = argcheck{
         local name = 'kgs_' .. partition
         local dataset = tnt.IndexedDataset{fields = { name }, path = './dataset'}
         local batch_size = batch_size
-        
+
         local game = nil
         local game_idx = 0
         local board = CBoard.new()
+
+        -- reusing tensors to save memory
+        local s = torch.FloatTensor(batch_size, 17, 19, 19)
+        local a = torch.FloatTensor(batch_size)
+        local z = torch.FloatTensor(batch_size)
+        local last_features = torch.FloatTensor(17, 19, 19)
 
         -----------------------
         -- loading games
@@ -113,6 +144,7 @@ get_dataloader = argcheck{
             game = sgf.parse(content:storage():string(), name)
             game.ply = 1
             CBoard.clear(board)
+            last_features:zero()
             goutils.apply_handicaps(board, game)
 
             print(idx..'-th game is loaded')
@@ -124,11 +156,6 @@ get_dataloader = argcheck{
         -----------------------
         -- iterator interface
         -----------------------
-        -- reusing tensors to save memory
-        local s = torch.FloatTensor(batch_size, 17, 19, 19)
-        local a = torch.IntTensor(batch_size)
-        local z = torch.FloatTensor(batch_size)
-
         local function _parse_next_position()
             if game.ply >= game:num_round() then load_next_game() end
             game.ply = game.ply + 1
@@ -138,7 +165,8 @@ get_dataloader = argcheck{
             CBoard.play(board, x, y, player)
             -- CBoard.show(board, 'last_move')
 
-            return get_input_n_label(board, game)
+            return get_input_n_label(board, game, last_features)
+            -- return fff(last_features)
         end
 
         local function _iter_batch(max_batches, ind)

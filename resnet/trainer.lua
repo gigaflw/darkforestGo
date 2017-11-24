@@ -1,10 +1,10 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-23 14:41:18
+-- @Last Modified time: 2017-11-24 13:08:30
 
-local meta = {}
-local Trainer = torch.class('resnet.Trainer', meta)
+local class = require 'class'
+local Trainer = class('resnet.Trainer')
 
 function Trainer:__init(net, crit, optim, optim_config)
     self.net = net
@@ -22,7 +22,7 @@ function Trainer:train(dataloader, max_batches)
 
     for ind, inputs, labels in dataloader.iter(max_batches) do
         labels = {labels.a, labels.z} -- array is needed for training
-        
+
         batch_loss = self:step(inputs, labels)[1]
         -- (just 1 value for the SGD optimization)
         -- FIXME: non-sgd optimzier not supported yet
@@ -40,6 +40,7 @@ function Trainer:step(inputs, labels)
         -- the argument and return of this function is required by `torch.optim`
         self.net:zeroGradParameters()
         self.net:forward(inputs)
+
         local loss = self.crit:forward(self.net.output, labels)
         local loss_grad = self.crit:backward(self.net.output, labels)
         self.net:backward(inputs, loss_grad)
@@ -47,9 +48,9 @@ function Trainer:step(inputs, labels)
         return loss, self.all_params_grad
     end  
 
-    local _, batch_loss = self.optim(eval, self.all_params, self.optim_config)
+    local _, loss = self.optim(eval, self.all_params, self.optim_config)
     -- loss is a table containing values of the loss function  
-    return batch_loss
+    return loss
 end
 
-return meta.Trainer
+return Trainer
