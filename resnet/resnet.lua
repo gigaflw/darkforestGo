@@ -1,9 +1,10 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:23:56
+-- @Last Modified time: 2017-11-24 16:24:06
 
 local nn = require 'nn'
+local nninit = require 'nninit'
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
@@ -82,6 +83,19 @@ local function create_model()
         :add(nn.ConcatTable()
             :add(policyHead())
             :add(valueHead()))
+
+    ---------------------------
+    --  Init parameters
+    -- according to fb.resnet.torch
+    ---------------------------
+    for _, pre in pairs{'nn', 'cudnn'} do
+        for _, m in pairs(model:findModules(pre..'.SpatialConvolution')) do
+            m:init('weight', nninit.xavier):init('bias', nninit.constant, 0)
+        end
+        for _, m in pairs(model:findModules(pre..'.SpatialBatchNormalization')) do
+            m:init('weight', nninit.constant, 1):init('bias', nninit.constant, 0)
+        end
+    end
 
     return model
 end
