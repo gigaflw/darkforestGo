@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-25 16:15:51
+-- @Last Modified time: 2017-11-25 16:36:19
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -34,7 +34,7 @@ function Trainer:__init(net, crit, optim, optim_opt, opt)
     self.optim = optim
     self.optim_opt = optim_opt
 
-    self.opt = {})
+    self.opt = {}
     setmetatable(self.opt, {
         __index = function(t, key)
             local val = opt[key] or default_opt[key]
@@ -61,19 +61,32 @@ function Trainer:train(dataloader)
     -- not shuffle yet
     opt = self.opt
 
+    local function _eval()
+        -- the argument and return of this function is required by `torch.optim`
+        return self.crit.output, self.all_params_grad
+    end
+
     for e = 1, opt.epoches do
         local epoch_loss, batches = 0, 0
 
         for ind, inputs, labels in dataloader.iter(opt.max_batches) do
             labels = {labels.a, labels.z} -- array is needed for training
 
-            batch_loss = self:_step(inputs, labels)[1]
-            -- (just 1 value for the SGD optimization)
-            -- FIXME: non-sgd optimzier not supported yet
+            -- batch_loss = self:_step(inputs, labels)
+            self.net:forward(inputs)
+            self.crit:forward(self.net.output, labels)
+
+            self.net:zeroGradParameters()
+
+            self.crit:backward(self.net.output, labels)
+            self.net:backward(inputs, self.crit.gradInput)
+            
+            self.optim(_eval, self.all_params, self.optim_opt)
 
             batches = batches + 1
-            epoch_loss = epoch_loss + batch_loss
-            print(string.format("Batch %d loss: %4f", batches, batch_loss))
+            epoch_loss = epoch_loss + self.crit.output
+
+            print(string.format("Batch %d loss: %4f", batches, self.crit.output))
         end
 
         epoch_loss = epoch_loss / batches
@@ -91,26 +104,10 @@ function Trainer:train(dataloader)
     if math.fmod(opt.epoches, opt.epoch_per_ckpt) ~= 0 then
         self.net:clearState()
         self:save(string.format('e%04d.params', opt.epoches))
+    end
     print("Training ends")
 end
 
-function Trainer:_step(inputs, labels)
-    local eval = function(new_param)
-        -- the argument and return of this function is required by `torch.optim`
-        self.net:zeroGradParameters()
-        self.net:forward(inputs)
-
-        local loss = self.crit:forward(self.net.output, labels)
-        local loss_grad = self.crit:backward(self.net.output, labels)
-        self.net:backward(inputs, loss_grad)
-
-        return loss, self.all_params_grad
-    end  
-
-    local _, loss = self.optim(eval, self.all_params, self.optim_opt)
-    -- loss is a table containing values of the loss function  
-    return loss
-end
 
 function Trainer:save(filename)
     torch.save(paths.concat(self.opt.ckpt_dir, filename), self.net)
