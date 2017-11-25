@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:24:54
+-- @Last Modified time: 2017-11-25 16:14:31
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -14,6 +14,8 @@ local opt = pl.lapp[[
     --max_batches           (default 20)         The number of batches in each epoch
     --epoches               (default 10)         The number of epoches
     --epoch_per_display     (default 1)          The number of epoches per displaying result
+    --epoch_per_ckpt        (default 10)          The number of epoches per saving checkpoints
+    --ckpt_dir              (default './resnet.ckpt') Where to store the checkpoints
 
     ** Network Options  **
     --n_residual_blocks     (default 3)          The number of residual blocks in the resnet, 19 or 39 according to the thesis
@@ -21,7 +23,6 @@ local opt = pl.lapp[[
     ** Optimizer Options  **
     ** optimizer opt depends on the type of the optimizer, change them in the hard-coded <optim>-opt **
 ]]
--- TODO: checkpoints
 
 local sgd_opt = {
   learningRate = 1,  
@@ -38,8 +39,8 @@ local net = resnet.create_model(opt)
 local crit = resnet.create_criterion()
 
 local dataloader = get_dataloader('test', opt.batch_size)
-dataloader.load_random_game()
 
 require 'optim'
 local trainer = Trainer(net, crit, optim.sgd, sgd_opt, opt)
+-- trainer:load()
 trainer:train(dataloader)

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:23:48
+-- @Last Modified time: 2017-11-25 15:50:57
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -157,7 +157,7 @@ get_dataloader = argcheck{
         -- iterator interface
         -----------------------
         local function _parse_next_position()
-            if game.ply >= game:num_round() then load_next_game() end
+            if game == nil or game.ply >= game:num_round() then load_random_game() end
             game.ply = game.ply + 1
 
             local x, y, player = sgf.parse_move(game.sgf[game.ply])

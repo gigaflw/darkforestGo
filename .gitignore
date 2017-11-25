@@ -15,3 +15,6 @@ CMakeLists.txt
 
 # others
 .DS_Store
+
+# checkpoints
+resnet.ckpt/
