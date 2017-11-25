@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-25 16:36:19
+-- @Last Modified time: 2017-11-25 17:07:39
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -56,7 +56,6 @@ function Trainer:__init(net, crit, optim, optim_opt, opt)
     print(string.format("The network has %d trainable parameters", (#self.all_params)[1]))
 end
 
-
 function Trainer:train(dataloader)
     -- not shuffle yet
     opt = self.opt
@@ -66,6 +65,7 @@ function Trainer:train(dataloader)
         return self.crit.output, self.all_params_grad
     end
 
+    self.net:training() -- set the model to training mode (this will affect dropout and batch normalization)
     for e = 1, opt.epoches do
         local epoch_loss, batches = 0, 0
 
@@ -90,7 +90,10 @@ function Trainer:train(dataloader)
         end
 
         epoch_loss = epoch_loss / batches
-        
+
+        ----------------------------
+        -- print result & save ckpt
+        ----------------------------
         if math.fmod(e, opt.epoch_per_display) == 0 then
             print(string.format("Epoch %d loss: %4f", e, epoch_loss))
         end
@@ -107,7 +110,6 @@ function Trainer:train(dataloader)
     end
     print("Training ends")
 end
-
 
 function Trainer:save(filename)
     torch.save(paths.concat(self.opt.ckpt_dir, filename), self.net)

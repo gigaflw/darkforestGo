@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-25 15:50:57
+-- @Last Modified time: 2017-11-25 16:56:19
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -121,6 +121,8 @@ get_dataloader = argcheck{
     {name = 'partition', type='string', help='"test" or "train"'},
     {name = 'batch_size', type='number'},
     call = function (partition, batch_size)
+        math.randomseed(os.time())
+
         local name = 'kgs_' .. partition
         local dataset = tnt.IndexedDataset{fields = { name }, path = './dataset'}
         local batch_size = batch_size
