@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-26 21:58:58
+-- @Last Modified time: 2017-11-26 22:58:46
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -38,9 +38,12 @@ local Trainer = require 'resnet.trainer'
 local net = resnet.create_model(opt)
 local crit = resnet.create_criterion()
 
-local dataloader = get_dataloader('train', opt.batch_size)
+local train_dataloader = get_dataloader('train', opt.batch_size)
+local test_dataloader = get_dataloader('test', opt.batch_size)
 
 require 'optim'
-local trainer = Trainer(net, crit, optim.sgd, sgd_opt, opt)
+local trainer = Trainer(net, crit, optim.sgd, sgd_opt, opt, train_dataloader, test_dataloader)
 -- trainer:load()
-trainer:train(dataloader)
+-- trainer:train()
+trainer:test()
+-- TODO: timer, cuda

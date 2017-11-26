@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-26 17:36:58
+-- @Last Modified time: 2017-11-26 22:57:46
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -16,7 +16,7 @@ local default_opt = {
     ckpt_dir = './resnet.ckpt'
 }
 
-function Trainer:__init(net, crit, optim, optim_opt, opt)
+function Trainer:__init(net, crit, optim, optim_opt, opt, train_dataloader, test_dataloader)
     local doc = [[
         @param: net: [ string | torch.nn.Module ]
             if `string`, then the checkpoint with the same name will be loaded
@@ -33,6 +33,9 @@ function Trainer:__init(net, crit, optim, optim_opt, opt)
     self.crit = crit
     self.optim = optim
     self.optim_opt = optim_opt
+
+    self.train_dataloader = train_dataloader
+    self.test_dataloader = test_dataloader
 
     self.opt = {}
     setmetatable(self.opt, {
@@ -72,7 +75,6 @@ function Trainer:train(dataloader)
         for ind, inputs, labels in dataloader.iter(opt.max_batches) do
             labels = {labels.a, labels.z} -- array is needed for training
 
-            -- batch_loss = self:_step(inputs, labels)
             self.net:forward(inputs)
             self.crit:forward(self.net.output, labels)
 
@@ -109,6 +111,43 @@ function Trainer:train(dataloader)
         self:save(string.format('e%04d.params', opt.epoches))
     end
     print("Training ends")
+end
+
+function Trainer:test()
+    -- not shuffle yet
+    opt = self.opt
+
+    local function _eval()
+        -- the argument and return of this function is required by `torch.optim`
+        return self.crit.output, self.all_params_grad
+    end
+
+    self.net:evaluate() -- set the model to non-training mode (this will affect dropout and batch normalization)
+    local top1_sum, top5_sum, batches = 0.0, 0.0, 0
+
+    for ind, inputs, labels in self.test_dataloader.iter(opt.max_batches) do
+        local batch_size = (#labels.a)[1]
+
+        labels = {labels.a, labels.z} -- array is needed for training
+
+        self.net:forward(inputs)
+        self.crit:forward(self.net.output, labels)
+
+        topv, topi = self.net.output[1]:topk(5)
+        acc = topi:eq(labels[1]:long():view(-1, 1):expandAs(topi))
+
+        local top1 = acc:narrow(2, 1, 1):sum() / batch_size
+        local top5 = acc:narrow(2, 1, 5):sum() / batch_size
+        top1_sum = top1_sum + top1
+        top5_sum = top5_sum + top5
+
+        batches = batches + 1
+        print(string.format("Batch %d loss: %4f top1 acc: %.5f%% top5 acc: %.5f%%",
+            batches, self.crit.output, top1 * 100, top5 * 100))
+    end
+
+    print(string.format("Tested %d batches, aver top1 acc: %.5f%% top5 acc: %.5f%%",
+            batches, top1_sum / batches * 100, top5_sum / batches * 100))
 end
 
 function Trainer:save(filename)
