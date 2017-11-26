@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-25 16:56:19
+-- @Last Modified time: 2017-11-26 17:05:13
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -149,7 +149,7 @@ get_dataloader = argcheck{
             last_features:zero()
             goutils.apply_handicaps(board, game)
 
-            print(idx..'-th game is loaded')
+            print(idx..'-th game is loaded, rounds: '..game:num_round())
             return game
         end
         local function load_random_game() return load_game(math.random(dataset:size())) end
@@ -159,9 +159,12 @@ get_dataloader = argcheck{
         -- iterator interface
         -----------------------
         local function _parse_next_position()
-            if game == nil or game.ply >= game:num_round() then load_random_game() end
+            if game == nil or game.ply - 1 >= game:num_round() then
+                repeat
+                    load_random_game()
+                until game:num_round() > 0
+            end
             game.ply = game.ply + 1
-
             local x, y, player = sgf.parse_move(game.sgf[game.ply])
             assert(player ~= nil, "Encounted nil player in "..game_idx.."-th game, "..game.ply.."-th move")
             CBoard.play(board, x, y, player)

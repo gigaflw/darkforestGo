@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-24 16:24:46
+-- @Last Modified time: 2017-11-26 21:52:39
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -110,7 +110,7 @@ local function create_criterion()
     --  loss = c:forward(pred, label)
     return nn.ParallelCriterion()
         :add(nn.CrossEntropyCriterion())
-        :add(nn.MSECriterion())  
+        :add(nn.MSECriterion())
 end
 
 return {

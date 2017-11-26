@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-25 17:07:39
+-- @Last Modified time: 2017-11-26 17:36:58
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -80,13 +80,13 @@ function Trainer:train(dataloader)
 
             self.crit:backward(self.net.output, labels)
             self.net:backward(inputs, self.crit.gradInput)
-            
+
             self.optim(_eval, self.all_params, self.optim_opt)
 
             batches = batches + 1
             epoch_loss = epoch_loss + self.crit.output
 
-            print(string.format("Batch %d loss: %4f", batches, self.crit.output))
+            print(string.format("\tBatch %d loss: %4f", batches, self.crit.output))
         end
 
         epoch_loss = epoch_loss / batches
