@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-26 22:57:46
+-- @Last Modified time: 2017-11-27 08:03:31
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -59,7 +59,7 @@ function Trainer:__init(net, crit, optim, optim_opt, opt, train_dataloader, test
     print(string.format("The network has %d trainable parameters", (#self.all_params)[1]))
 end
 
-function Trainer:train(dataloader)
+function Trainer:train()
     -- not shuffle yet
     opt = self.opt
 
@@ -72,7 +72,7 @@ function Trainer:train(dataloader)
     for e = 1, opt.epoches do
         local epoch_loss, batches = 0, 0
 
-        for ind, inputs, labels in dataloader.iter(opt.max_batches) do
+        for ind, inputs, labels in self.train_dataloader.iter(opt.max_batches) do
             labels = {labels.a, labels.z} -- array is needed for training
 
             self.net:forward(inputs)
@@ -123,9 +123,12 @@ function Trainer:test()
     end
 
     self.net:evaluate() -- set the model to non-training mode (this will affect dropout and batch normalization)
-    local top1_sum, top5_sum, batches = 0.0, 0.0, 0
+    local epoch_loss, top1_sum, top5_sum, batches = 0.0, 0.0, 0.0, 0
+    local timer = torch.Timer()
 
     for ind, inputs, labels in self.test_dataloader.iter(opt.max_batches) do
+        local data_time = timer:time().real
+
         local batch_size = (#labels.a)[1]
 
         labels = {labels.a, labels.z} -- array is needed for training
@@ -140,14 +143,16 @@ function Trainer:test()
         local top5 = acc:narrow(2, 1, 5):sum() / batch_size
         top1_sum = top1_sum + top1
         top5_sum = top5_sum + top5
+        epoch_loss = epoch_loss + self.crit.output
 
         batches = batches + 1
-        print(string.format("Batch %d loss: %4f top1 acc: %.5f%% top5 acc: %.5f%%",
-            batches, self.crit.output, top1 * 100, top5 * 100))
+        print(string.format("Test [%d/%d], data time: %.3f secs, time: %.3f secs, loss: %4f, top1 acc: %.5f%%, top5 acc: %.5f%%",
+            ind, opt.max_batches, data_time, timer:time().real - data_time, self.crit.output, top1 * 100, top5 * 100))
+        timer:reset()
     end
 
-    print(string.format("Tested %d batches, aver top1 acc: %.5f%% top5 acc: %.5f%%",
-            batches, top1_sum / batches * 100, top5_sum / batches * 100))
+    print(string.format("Tested %d batches, aver loss: %.5f, top1 acc: %.5f%% top5 acc: %.5f%%",
+            batches, epoch_loss / batches, top1_sum / batches * 100, top5_sum / batches * 100))
 end
 
 function Trainer:save(filename)
