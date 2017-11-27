@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-26 21:52:39
+-- @Last Modified time: 2017-11-27 15:02:53
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -96,6 +96,11 @@ local function create_model(opt)
         for _, m in pairs(model:findModules(pre..'.SpatialBatchNormalization')) do
             m:init('weight', nninit.constant, 1):init('bias', nninit.constant, 0)
         end
+    end
+
+    if opt.use_gpu then
+        require 'cudnn'
+        cudnn.convert(model, cudnn)
     end
 
     return model

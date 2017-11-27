@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 09:06:38
+-- @Last Modified time: 2017-11-27 15:44:40
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -17,6 +17,9 @@ local opt = pl.lapp[[
     --epoch_per_test     (default 1)        The number of epochs per testing
     --epoch_per_ckpt     (default 1)        The number of epochs per saving checkpoints
     --ckpt_dir           (default './resnet.ckpt')    Where to store the checkpoints
+
+    ** GPU Options  **
+    --use_gpu
 
     ** Network Options  **
     --n_residual_blocks  (default 2)        The number of residual blocks in the resnet, 19 or 39 according to the thesis
@@ -42,4 +45,3 @@ local trainer = Trainer(net, crit, opt, train_dataloader, test_dataloader)
 -- trainer:load()
 -- trainer:train()
 trainer:test()
--- TODO: timer, cuda

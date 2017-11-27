@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 08:36:11
+-- @Last Modified time: 2017-11-27 15:18:18
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -37,7 +37,7 @@ local board_to_features = argcheck{
     {name='last_features', type='torch.FloatTensor',
         help='Feature from last iteration since history info is needed'},
     call = function (board, player, last_features)
-        ret = last_features or torch.IntTensor(17, 19, 19):zero()
+        ret = last_features or torch.FloatTensor(17, 19, 19):zero()
 
         for i = 16, 4, -2 do
             ret[i] = ret[i-3]
@@ -171,7 +171,6 @@ get_dataloader = argcheck{
             -- CBoard.show(board, 'last_move')
 
             return get_input_n_label(board, game, last_features)
-            -- return fff(last_features)
         end
 
         local function _iter_batch(max_batches, ind)
@@ -181,9 +180,8 @@ get_dataloader = argcheck{
             s:zero(); a:zero(); z:zero()
 
             for i = 1, batch_size do
-            -- for i, feature, label in _iter, game, 0 do
                 local data = _parse_next_position()
-                s[i]:copy(data.s) -- should use copy or `=` ?
+                s[i] = data.s
                 a[i] = data.a
                 z[i] = data.z
             end

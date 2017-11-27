@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 09:15:16
+-- @Last Modified time: 2017-11-27 15:44:08
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -29,6 +29,14 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
             the criterion used to calculate loss
         @param: opt:
             the options for everything, once set, cannot be modified
+        @param: dataloader:
+            a dataloader from `resnet.dataloader`, with which one can
+            for ind, inputs, labels in dataloader.iter(opt.max_batches) do
+                -- inputs: a tensor in the shape of batch_size x feature_plane x 19 x 19
+                -- labels.a: a batch_size-d vector indicating the move
+                -- labels.z: a batch_size-d 0-1 vector indicating win or lose
+            end
+            all float tensors
     ]]
 
     self.crit = crit
@@ -41,6 +49,16 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
         nesterov = true,
         dampening = 0.0
     }
+
+    if opt.use_gpu then
+        require 'cunn'
+        self.inputs = torch.CudaFloatTensor()
+        self.labels = {torch.CudaFloatTensor(), torch.CudaFloatTensor()}
+    else
+        -- size is adpated to the dataset while training/testing
+        self.inputs = torch.FloatTensor()
+        self.labels = {torch.FloatTensor(), torch.FloatTensor()}
+    end
 
     self.train_dataloader = train_dataloader
     self.test_dataloader = test_dataloader
@@ -83,26 +101,26 @@ function Trainer:train()
 
     for e = 1, opt.epochs do
         for ind, inputs, labels in self.train_dataloader.iter(opt.max_batches) do
-            local data_time = timer:time().real
             labels = {labels.a, labels.z} -- array is needed for training, not table
-
+            self:copy_data(inputs, labels) -- move data to gpu if in gpu mode
+            local data_time = timer:time().real
             ----------------------------
             -- update parameters
             ----------------------------
-            self.net:forward(inputs)
-            self.crit:forward(self.net.output, labels)
+            self.net:forward(self.inputs)
+            self.crit:forward(self.net.output, self.labels)
 
             self.net:zeroGradParameters()
 
-            self.crit:backward(self.net.output, labels)
-            self.net:backward(inputs, self.crit.gradInput)
+            self.crit:backward(self.net.output, self.labels)
+            self.net:backward(self.inputs, self.crit.gradInput)
 
             self.optim(_eval, self.all_params, self.optim_state)
 
             ----------------------------
             -- print result
             ----------------------------
-            local compute_time = timer:time().real
+            local update_time = timer:time().real
             local top1, top5 = self:accuracy(self.net.output, labels)
 
             print(string.format("| Epoch %d [%02d/%d], data time: %.3fs, time: %.3fs, loss: %4f, top1 acc: %.5f%%, top5 acc: %.5f%%",
@@ -145,14 +163,14 @@ function Trainer:test()
     local timer = torch.Timer()
 
     for ind, inputs, labels in self.test_dataloader.iter(opt.test_batches) do
+        self:copy_data(inputs, labels) -- move data to gpu if in gpu mode
         local data_time = timer:time().real
 
         local batch_size = (#labels.a)[1]
-
         labels = {labels.a, labels.z} -- array is needed for training
 
-        self.net:forward(inputs)
-        self.crit:forward(self.net.output, labels)
+        self.net:forward(self.inputs)
+        self.crit:forward(self.net.output, self.labels)
 
         local compute_time = timer:time().real
 
@@ -188,6 +206,16 @@ function Trainer:accuracy(outputs, labels)
     local top5 = acc:narrow(2, 1, 5):sum() / batch_size
 
     return top1, top5
+end
+
+function Trainer:copy_data(inputs, labels)
+    -- is resizing time-consuming?
+    if #inputs ~= #self.inputs then self.inputs:resize(#inputs) end
+    self.inputs:copy(inputs)
+    for i, mat in pairs(self.labels) do
+        if #labels[i] ~= #mat then mat:resize(#labels[i]) end
+        mat:copy(labels[i])
+    end
 end
 
 function Trainer:save(filename)
