@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 15:18:18
+-- @Last Modified time: 2017-11-27 16:32:45
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -54,8 +54,9 @@ local board_to_features = argcheck{
 }
 
 
-local get_input_n_label = argcheck{
+local put_and_parse = argcheck{
     doc = [[
+        put the augmented (rotated) stone onto the board,
         get the input features and corresponding labels of a single play in a game,
         which position is parsed depends on `game.ply` attribute
         return: {
@@ -68,26 +69,16 @@ local get_input_n_label = argcheck{
     ]],
     {name='board', type='cdata', help='A `board.board` instance'},
     {name='game', type='sgfloader', help='A `sgfloader` instance, get by calling `sgf.parse()'},
-    {name='last_features', type='torch.FloatTensor', help='Feature from last iteration since history info is needed'},
-    -- {name='augment', type='boolean', default=false, help='Carry out rotation/reflection on data'},
-    call = function (board, game, last_features)
+    {name='last_features', type='torch.FloatTensor',
+        help='Feature from last iteration since history info is needed'},
+    {name='augment', type='number', opt=true, help='[0, 7], the rotation style used for data augmentation, nil to disable'},
+    call = function (board, game, last_features, augment)
         local x, y, player = sgf.parse_move(game.sgf[game.ply])
-        ---------------------
-        -- Data Augmentation
-        -- FIXME: can't rotate because resnet uses history stones
-        ---------------------
-        -- local transformStyle = 0
-        
-        -- if augment then
-        --     transformStyle = torch.random(0, 7)
-        --     feature = goutils.rotateTransform(feature, transformStyle)
-        -- end
-        -- local x_rot, y_rot = goutils.rotateMove(x, y, transformStyle)
-
-        ---------------------
-        -- Prepare Move
-        ---------------------
         local is_pass = x == 0 and y == 0
+
+        if augment ~= nil then x, y = goutils.rotateMove(x, y, augment) end
+
+        if not is_pass then CBoard.play(board, x, y, player) end
         local moveIdx = is_pass and 19*19+1 or goutils.xy2moveIdx(x, y)
         assert(moveIdx > 0 and moveIdx <= 19 * 19 + 1)
 
@@ -116,11 +107,16 @@ get_dataloader = argcheck{
         > end
         where input is shaped batch_size x feature_planes x 19 x 19,
         label = { a = <a batch_size-d vector>, z = <a batch_size-d vector> }
-        refer to `get_input_n_label` for meanings of features, `a` and `z`
+        refer to `put_and_parse` for meanings of features, `a` and `z`
     ]],
     {name = 'partition', type='string', help='"test" or "train"'},
-    {name = 'batch_size', type='number'},
-    call = function (partition, batch_size)
+    {name = 'opt', type='table'},
+    call = function (partition, opt)
+        batch_size = opt.batch_size
+        use_augment = opt.data_augment
+        assert(batch_size ~= nil, "No 'batch_size' found in opt")
+        assert(use_augment ~= nil, "No 'data_augment' found in opt")
+
         math.randomseed(os.time())
 
         local name = 'kgs_' .. partition
@@ -136,6 +132,7 @@ get_dataloader = argcheck{
         local a = torch.FloatTensor(batch_size)
         local z = torch.FloatTensor(batch_size)
         local last_features = torch.FloatTensor(17, 19, 19)
+        local augment = nil -- augment style should be consistent during a single game
 
         -----------------------
         -- loading games
@@ -146,10 +143,14 @@ get_dataloader = argcheck{
             game = sgf.parse(content:storage():string(), name)
             game.ply = 1
             CBoard.clear(board)
-            last_features:zero()
-            goutils.apply_handicaps(board, game)
 
-            print(idx..'-th game is loaded, rounds: '..game:num_round())
+            last_features:zero()
+            if use_augment then
+                augment = torch.random(0, 7)  -- according to goutil.rotateMove and goutil.rotateTransform
+            end
+
+            goutils.apply_handicaps(board, game)
+            print(string.format('%d-th game is loaded, rounds: %d, augment: %s', idx, game:num_round(), augment))
             return game
         end
         local function load_random_game() return load_game(math.random(dataset:size())) end
@@ -160,17 +161,12 @@ get_dataloader = argcheck{
         -----------------------
         local function _parse_next_position()
             if game == nil or game.ply - 1 >= game:num_round() then
-                repeat
-                    load_random_game()
-                until game:num_round() > 0
+                repeat load_next_game() until game:num_round() > 0
             end
             game.ply = game.ply + 1
-            local x, y, player = sgf.parse_move(game.sgf[game.ply])
-            assert(player ~= nil, "Encounted nil player in "..game_idx.."-th game, "..game.ply.."-th move")
-            CBoard.play(board, x, y, player)
-            -- CBoard.show(board, 'last_move')
 
-            return get_input_n_label(board, game, last_features)
+            -- this function should also put the augmented stone onto the board
+            return put_and_parse(board, game, last_features, augment)
         end
 
         local function _iter_batch(max_batches, ind)

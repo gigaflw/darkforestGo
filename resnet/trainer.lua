@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 15:44:08
+-- @Last Modified time: 2017-11-27 16:18:35
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -163,11 +163,11 @@ function Trainer:test()
     local timer = torch.Timer()
 
     for ind, inputs, labels in self.test_dataloader.iter(opt.test_batches) do
-        self:copy_data(inputs, labels) -- move data to gpu if in gpu mode
-        local data_time = timer:time().real
-
         local batch_size = (#labels.a)[1]
         labels = {labels.a, labels.z} -- array is needed for training
+        self:copy_data(inputs, labels) -- move data to gpu if in gpu mode
+
+        local data_time = timer:time().real
 
         self.net:forward(self.inputs)
         self.crit:forward(self.net.output, self.labels)

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 15:44:40
+-- @Last Modified time: 2017-11-27 16:33:02
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -9,8 +9,11 @@ doc = [[
 
 local pl = require 'pl.import_into'()
 local opt = pl.lapp[[
-    ** Training Options  **
+    ** Dataset Options  **
     --batch_size         (default 24)       The number of positions in each batch
+    --data_augment       (default true)     use rotation/reflection to augment dataset
+
+    ** Training Options  **
     --max_batches        (default 20)       The number of batches in each epoch (commonly 1 epoch means to go through all data, however here it is too large)
     --test_batches       (default 20)       The number of batches when testing
     --epochs             (default 100)      The number of epochs
@@ -23,7 +26,7 @@ local opt = pl.lapp[[
 
     ** Network Options  **
     --n_residual_blocks  (default 2)        The number of residual blocks in the resnet, 19 or 39 according to the thesis
-    
+
     ** Optimizer Options  **
     --lr                (default 0.1)       learning rate
     --lr_decay          (default 5e-5)      learning rate decay
@@ -38,8 +41,8 @@ local Trainer = require 'resnet.trainer'
 local net = resnet.create_model(opt)
 local crit = resnet.create_criterion()
 
-local train_dataloader = get_dataloader('train', opt.batch_size)
-local test_dataloader = get_dataloader('test', opt.batch_size)
+local train_dataloader = get_dataloader('train', opt)
+local test_dataloader = get_dataloader('test', opt)
 
 local trainer = Trainer(net, crit, opt, train_dataloader, test_dataloader)
 -- trainer:load()
