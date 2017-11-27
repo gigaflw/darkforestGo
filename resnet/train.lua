@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 16:49:45
+-- @Last Modified time: 2017-11-27 16:51:39
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -9,6 +9,8 @@ doc = [[
 
 local pl = require 'pl.import_into'()
 local opt = pl.lapp[[
+    --test               If true, only run the test epoch
+
     ** Dataset Options  **
     --batch_size         (default 24)       The number of positions in each batch
     --data_augment       (default true)     use rotation/reflection to augment dataset
@@ -46,6 +48,8 @@ local train_dataloader = get_dataloader('train', opt)
 local test_dataloader = get_dataloader('test', opt)
 
 local trainer = Trainer(net, crit, opt, train_dataloader, test_dataloader)
--- trainer:load()
--- trainer:train()
-trainer:test()
+if opt.test then
+    trainer:test()
+else
+    trainer:train()
+end
