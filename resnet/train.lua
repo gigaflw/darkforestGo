@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 16:51:39
+-- @Last Modified time: 2017-11-27 18:45:52
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -42,7 +42,7 @@ local get_dataloader = require 'resnet.dataloader'
 local Trainer = require 'resnet.trainer'
 
 local net = resnet.create_model(opt)
-local crit = resnet.create_criterion()
+local crit = resnet.create_criterion(opt)
 
 local train_dataloader = get_dataloader('train', opt)
 local test_dataloader = get_dataloader('test', opt)
