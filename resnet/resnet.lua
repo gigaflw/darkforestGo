@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 15:02:53
+-- @Last Modified time: 2017-11-27 19:07:26
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -14,8 +14,8 @@ local Linear = nn.Linear
 local BatchNorm = nn.SpatialBatchNormalization
 
 local function create_model(opt)
-    assert(opt.n_residual_blocks, "ResNet: No opt.n_residual_blocks assigned")
-    local n_residual_blocks = opt.n_residual_blocks -- 19 or 39 according to the thesis
+    assert(opt.n_res, "ResNet: No opt.n_res assigned")
+    local n_residual_blocks = opt.n_res -- 19 or 39 according to the thesis
 
     ---------------------------
     -- Residual Block & Tower
@@ -99,23 +99,30 @@ local function create_model(opt)
     end
 
     if opt.use_gpu then
-        require 'cudnn'
-        cudnn.convert(model, cudnn)
+        require 'cunn'
+        model = model:cuda()
     end
 
     return model
 end
 
-local function create_criterion()
+local function create_criterion(opt)
     -- Make this a function should custom options be necessary
     -- usage:
     --  c = create_criterion()
     --  pred = { < a 362-d vecto >, < a scalar > }
     --  label = { < a integer between [1, 362] >, < -1 or 1 > }
     --  loss = c:forward(pred, label)
-    return nn.ParallelCriterion()
+    crit = nn.ParallelCriterion()
         :add(nn.CrossEntropyCriterion())
         :add(nn.MSECriterion())
+
+    if opt.use_gpu then
+        require 'cunn'
+        crit = crit:cuda()
+    end
+
+    return crit
 end
 
 return {

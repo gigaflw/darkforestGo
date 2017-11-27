@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 16:48:43
+-- @Last Modified time: 2017-11-27 19:01:38
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -52,8 +52,8 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
 
     if opt.use_gpu then
         require 'cunn'
-        self.inputs = torch.CudaFloatTensor()
-        self.labels = {torch.CudaFloatTensor(), torch.CudaFloatTensor()}
+        self.inputs = torch.CudaTensor()
+        self.labels = {torch.CudaTensor(), torch.CudaTensor()}
     else
         -- size is adpated to the dataset while training/testing
         self.inputs = torch.FloatTensor()
@@ -204,7 +204,11 @@ function Trainer:accuracy(outputs, labels)
     local batch_size = (#v)[1]
 
     topv, topi = p:topk(5)
-    acc = topi:eq(a:long():view(-1, 1):expandAs(topi))
+    if self.opt.use_gpu then
+        acc = topi:eq(a:cudaLong():view(-1, 1):expandAs(topi))
+    else
+        acc = topi:eq(a:long():view(-1, 1):expandAs(topi))
+    end
 
     local top1 = acc:narrow(2, 1, 1):sum() / batch_size
     local top5 = acc:narrow(2, 1, 5):sum() / batch_size
