@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 16:32:45
+-- @Last Modified time: 2017-11-27 16:46:31
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -161,7 +161,7 @@ get_dataloader = argcheck{
         -----------------------
         local function _parse_next_position()
             if game == nil or game.ply - 1 >= game:num_round() then
-                repeat load_next_game() until game:num_round() > 0
+                repeat load_random_game() until game:num_round() > 0
             end
             game.ply = game.ply + 1
 

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 16:18:35
+-- @Last Modified time: 2017-11-27 16:48:43
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -75,7 +75,9 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
     lfs.mkdir(opt.ckpt_dir)  -- nothing will happen if the dir already exists
 
     if type(net) == 'string' then
-        self:load_params(net)
+        self:load(net)
+    elseif opt.resume_ckpt ~= '' then
+        self:load(opt.resume_ckpt)
     else
         self.net = net
     end
@@ -123,7 +125,7 @@ function Trainer:train()
             local update_time = timer:time().real
             local top1, top5 = self:accuracy(self.net.output, labels)
 
-            print(string.format("| Epoch %d [%02d/%d], data time: %.3fs, time: %.3fs, loss: %4f, top1 acc: %.5f%%, top5 acc: %.5f%%",
+            print(string.format("| Epoch %d [%02d/%02d], data time: %.3fs, time: %.3fs, loss: %4f, top1 acc: %.5f%%, top5 acc: %.5f%%",
                 e, ind, opt.max_batches, data_time, update_time - data_time, self.crit.output, top1 * 100, top5 * 100))
             timer:reset()
         end
@@ -134,6 +136,8 @@ function Trainer:train()
         if math.fmod(e, opt.epoch_per_ckpt) == 0 then
             self.net:clearState()
             self:save(string.format('e%04d.params', e))
+        else
+            self:save() -- save 'latest.params' every epoch
         end
         if math.fmod(e, opt.epoch_per_test) == 0 then
             self.net:clearState()
@@ -223,9 +227,9 @@ function Trainer:save(filename)
         net = self.net,
         optim_state = self.optim_state
     }
-    torch.save(paths.concat(self.opt.ckpt_dir, filename), obj)
+    if filename then torch.save(paths.concat(self.opt.ckpt_dir, filename), obj) end
     torch.save(paths.concat(self.opt.ckpt_dir, 'latest.params'), obj)
-    print("checkpoint '"..filename.."' saved")
+    print("checkpoint '"..(filename or 'latest').."' saved")
 end
 
 function Trainer:load(filename)
