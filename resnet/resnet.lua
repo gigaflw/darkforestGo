@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 18:50:59
+-- @Last Modified time: 2017-11-27 19:07:26
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -14,8 +14,8 @@ local Linear = nn.Linear
 local BatchNorm = nn.SpatialBatchNormalization
 
 local function create_model(opt)
-    assert(opt.n_residual_blocks, "ResNet: No opt.n_residual_blocks assigned")
-    local n_residual_blocks = opt.n_residual_blocks -- 19 or 39 according to the thesis
+    assert(opt.n_res, "ResNet: No opt.n_res assigned")
+    local n_residual_blocks = opt.n_res -- 19 or 39 according to the thesis
 
     ---------------------------
     -- Residual Block & Tower

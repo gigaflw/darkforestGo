@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 18:45:52
+-- @Last Modified time: 2017-11-27 19:16:03
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -12,8 +12,9 @@ local opt = pl.lapp[[
     --test               If true, only run the test epoch
 
     ** Dataset Options  **
-    --batch_size         (default 24)       The number of positions in each batch
-    --data_augment       (default true)     use rotation/reflection to augment dataset
+    --batch_size         (default 24)       The number of positions in each batch, 2048 in AlphaGo Zero thesis
+    --data_augment                          use rotation/reflection to augment dataset
+    --verbose                               Whether print data loading detailsv
 
     ** Training Options  **
     --max_batches        (default 20)       The number of batches in each epoch (commonly 1 epoch means to go through all data, however here it is too large)
@@ -26,9 +27,10 @@ local opt = pl.lapp[[
 
     ** GPU Options  **
     --use_gpu
+    --device             (default 3)        which core to use on a multicore GPU environment
 
     ** Network Options  **
-    --n_residual_blocks  (default 2)        The number of residual blocks in the resnet, 19 or 39 according to the thesis
+    --n_res              (default 2)        The number of residual blocks in the resnet, 19 or 39 according to the thesis
 
     ** Optimizer Options  **
     --lr                (default 0.1)       learning rate
@@ -36,6 +38,12 @@ local opt = pl.lapp[[
     --wd                (default 1e-4)      weight decay, exactly L2 regularization
     --momentum          (default 0.9)
 ]]
+
+if opt.use_gpu then
+    require 'cutorch'
+    cutorch.setDevice(opt.device)
+    print()
+end
 
 local resnet = require 'resnet.resnet'
 local get_dataloader = require 'resnet.dataloader'

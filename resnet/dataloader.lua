@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 16:46:31
+-- @Last Modified time: 2017-11-27 19:12:29
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -150,7 +150,10 @@ get_dataloader = argcheck{
             end
 
             goutils.apply_handicaps(board, game)
-            print(string.format('%d-th game is loaded, rounds: %d, augment: %s', idx, game:num_round(), augment))
+
+            if opt.verbose then
+                print(string.format('%d-th game is loaded, rounds: %d, augment: %s', idx, game:num_round(), augment))
+            end
             return game
         end
         local function load_random_game() return load_game(math.random(dataset:size())) end
