@@ -70,6 +70,7 @@ local opt = pl.lapp[[
     --min_rollout_peekable           (default 20000)  The command peek will return if the minimal number of rollouts exceed this threshold
     --save_sgf_per_move                               If so, then we save sgf file for each move
     --use_formal_params                               If so, then use formal parameters
+    --use_custom_params                               If so, then use custom parameters
 ]]
 
 local function load_params_for_formal_game()
@@ -89,6 +90,7 @@ local function load_params_for_formal_game()
     opt.max_num_move = 7 --      (default 20)          Maximum number of moves to consider in each tree node.
     opt.min_num_move = 1    --  (default 1)          Minimum number of moves to consider in each tree node.
     opt.decision_mixture_ratio = 5.0 -- (default 5.0)   Mixture MCTS count ratio with cnn_confidence.
+    opt.time_limit = 10       --(default 0)          Limit time for each move in second. If set to 0, then there is no time limit.
     opt.win_rate_thres = 0.1  --  (default 0.0)        If the win rate is lower than that, resign.
     opt.use_pondering = true --                        Whether we use pondering
     opt.dynkomi_factor = 0.0 --   (default 0.0)        Use dynkomi_factor
@@ -114,8 +116,54 @@ local function load_params_for_formal_game()
     opt.save_sgf_per_move = true
 end
 
+local function load_params_for_custom_game()
+    opt.rollout = 1000  --       (default 1000)         The number of rollout we use.
+    opt.dcnn_rollout = -1          -- The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
+    opt.dp_max_depth = 10000 --    (default 10000)        The max_depth of default policy.
+    opt.verbose = 1 --      (default 1)            The verbose level (1 = critical, 2 = info, 3 = debug)
+    opt.print_tree = true --                             Whether print the search tree.
+    opt.max_send_attempts = 3 -- (default 3)          #attempts to send to the server.
+    opt.pipe_path = "../../dflog" --         (default "/data/local/go/") Pipe path
+    opt.tier_name = "ai.go-evaluator" --         (default "ai.go-evaluator") Tier name
+    opt.server_type = "local" --       (default "local")                 We can choose "local" or "cluster"
+    opt.tree_to_json = false --                           Whether we save the tree to json file for visualization. Note that pipe_path will be used.
+    opt.num_tree_thread = 16 --   (default 16)         The number of threads used to expand MCTS tree.
+    opt.num_virtual_games = 5
+    opt.acc_prob_thres = 0.8 --    (default 0.8)        Accumulated probability threshold. We remove the remove if by the time we see it, the accumulated prob is greater than this thres.
+    opt.max_num_move = 20 --      (default 20)          Maximum number of moves to consider in each tree node.
+    opt.min_num_move = 1    --  (default 1)          Minimum number of moves to consider in each tree node.
+    opt.decision_mixture_ratio = 5.0 -- (default 5.0)   Mixture MCTS count ratio with cnn_confidence.
+    opt.win_rate_thres = 0.0  --  (default 0.0)        If the win rate is lower than that, resign.
+    opt.use_pondering = true --                        Whether we use pondering
+    opt.dynkomi_factor = 0.0 --   (default 0.0)        Use dynkomi_factor
+    opt.single_move_return = false --                     Use single move return (When we only have one choice, return the move immediately)
+    opt.expand_search_endgame = false --                  Whether we expand the search in end game.
+    opt.default_policy= "v2" --    (default "v2")       The default policy used. Could be "simple", "pachi", "v2".
+    opt.default_policy_pattern_file = "../models/playout-model.bin" -- The default policy pattern file
+    opt.default_policy_temperature = 0.5
+    opt.online_model_alpha = 0.0 --         (default 0.0)      Whether we use online model and its alpha
+    opt.online_prior_mixture_ratio = 0.0 -- (default 0.0)      Online prior mixture ratio.
+    opt.use_rave = false --                               Whether we use RAVE.
+    opt.use_cnn_final_score = false --                    Whether we use CNN final score.
+    opt.min_ply_to_use_cnn_final_score = 100 -- (default 100)     When to use cnn final score.
+    opt.final_mixture_ratio = 0.5 -- (default 0.5)    The mixture ratio we used.
+    opt.use_old_uct = false
+    opt.percent_playout_in_expansion = 5
+    opt.use_async = false      --                                 Open async model.
+    opt.cpu_only = false     --                                   Whether we only use fast rollout.
+    opt.expand_n_thres = 0 --              (default 0)      Statistics collected before expand.
+    opt.sample_topn = -1 --                   (default -1)     If use v2, topn we should sample..
+    opt.rule = "jp"  --             (default cn)         Use JP rule : jp, use CN rule: cn
+    opt.num_playout_per_rollout = 1
+    opt.save_sgf_per_move = false
+end
+
 if opt.use_formal_params then
     load_params_for_formal_game()
+end
+
+if opt.use_custom_params then
+    load_params_for_custom_game()
 end
 
 -- io.stderr:write("Loading model = " .. opt.input)
