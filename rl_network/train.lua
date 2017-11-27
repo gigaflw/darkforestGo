@@ -27,10 +27,10 @@ local opt = pl.lapp[[
     --presample_codename2  (default "darkfores1")
     --presample_ft         (default "old")
     --copy_path            (default "")
+    --pipe_path            (default "../../dflog")  Pipe path
 ]]
 
 -- opt.feature_type and opt.rank are necessary for the game to be played.
---local dcnn_opt = dcnn_utils.init(opt)
 local dcnn_opt1, dcnn_opt2 = dcnn_utils.rl_init(opt)
 
 local b = board.new()

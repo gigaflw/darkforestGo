@@ -11,6 +11,9 @@ local dcnn_utils = require("board.dcnn_utils")
 local sgf = require("utils.sgf")
 local common = require("common.common")
 
+local mcts_v2 = require("cnnPlayerV2.cnnPlayerMCTSV2")
+
+
 local def_policy = dp.new()
 local ownermap = om.new()
 

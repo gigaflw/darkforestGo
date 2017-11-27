@@ -91,7 +91,7 @@ sh cnn_evaluator.sh [num_gpu] [pipe file path]
 * `num_gpu`         the number of GPUs (1-8) you have for the current machine.
 * `pipe file path`  The path that the pipe file is settled. Default is `/data/local/go`. If you have specific other path, then you need to specify the same when running `cnnPlayerMCTSV2.lua`
 
-Example: `sh cnn_evaluator.sh 4 /data/local/go`
+Example: `sh rl_cnn_evaluator.sh 4 /data/local/go`
 
 Step 3: Run the main program
 
