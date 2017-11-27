@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 08:37:54
+-- @Last Modified time: 2017-11-27 09:06:38
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -10,11 +10,10 @@ doc = [[
 local pl = require 'pl.import_into'()
 local opt = pl.lapp[[
     ** Training Options  **
-    --batch_size         (default 24)     The number of positions in each batch
+    --batch_size         (default 24)       The number of positions in each batch
     --max_batches        (default 20)       The number of batches in each epoch (commonly 1 epoch means to go through all data, however here it is too large)
     --test_batches       (default 20)       The number of batches when testing
     --epochs             (default 100)      The number of epochs
-    --epoch_per_display  (default 1)        The number of epochs per displaying result
     --epoch_per_test     (default 1)        The number of epochs per testing
     --epoch_per_ckpt     (default 1)        The number of epochs per saving checkpoints
     --ckpt_dir           (default './resnet.ckpt')    Where to store the checkpoints
