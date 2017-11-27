@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-26 17:05:13
+-- @Last Modified time: 2017-11-27 08:36:11
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -176,7 +176,7 @@ get_dataloader = argcheck{
 
         local function _iter_batch(max_batches, ind)
             ind = ind + 1
-            if ind == max_batches then return nil end
+            if ind > max_batches then return nil end
 
             s:zero(); a:zero(); z:zero()
 

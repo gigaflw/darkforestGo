@@ -1,38 +1,47 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 08:03:31
+-- @Last Modified time: 2017-11-27 08:35:40
 
 local lfs = require 'lfs'
 local class = require 'class'
 local Trainer = class('resnet.Trainer')
 
 local default_opt = {
-    batch_size = 3,
-    max_batches = 4,
+    batch_size = 24,
+    max_batches = 20,
+    test_batches = 20,
     epoches = 3,
     epoch_per_display = 1,
     epoch_per_ckpt = 1,
-    ckpt_dir = './resnet.ckpt'
+    ckpt_dir = './resnet.ckpt',
+
+    lr = 0.1,
+    lr_decay = 5e-5,
+    wd = 1e-4,
+    momentum = 0.9
 }
 
-function Trainer:__init(net, crit, optim, optim_opt, opt, train_dataloader, test_dataloader)
+function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
     local doc = [[
         @param: net: [ string | torch.nn.Module ]
             if `string`, then the checkpoint with the same name will be loaded
         @param: crit: [ torch.nn.Criterion ]
             the criterion used to calculate loss
-        @param: optim:
-            the optimizer used to update parameters
-        @param: optim_opt:
-            the options for optimizer, refer to the doc of the specific optimizer for entries
         @param: opt:
             the options for everything, once set, cannot be modified
     ]]
 
     self.crit = crit
-    self.optim = optim
-    self.optim_opt = optim_opt
+    self.optim = (require 'optim').sgd
+    self.optim_state = {
+        learningRate = opt.lr or default_opt.lr,
+        learningRateDecay = opt.lr_decay or default_opt.lr_decay,
+        weightDecay = opt.wd or default_opt.wd,
+        momentum = opt.momentum or default_opt.momentum,
+        nesterov = true,
+        dampening = 0.0
+    }
 
     self.train_dataloader = train_dataloader
     self.test_dataloader = test_dataloader
@@ -83,7 +92,7 @@ function Trainer:train()
             self.crit:backward(self.net.output, labels)
             self.net:backward(inputs, self.crit.gradInput)
 
-            self.optim(_eval, self.all_params, self.optim_opt)
+            self.optim(_eval, self.all_params, self.optim_state)
 
             batches = batches + 1
             epoch_loss = epoch_loss + self.crit.output
@@ -126,7 +135,7 @@ function Trainer:test()
     local epoch_loss, top1_sum, top5_sum, batches = 0.0, 0.0, 0.0, 0
     local timer = torch.Timer()
 
-    for ind, inputs, labels in self.test_dataloader.iter(opt.max_batches) do
+    for ind, inputs, labels in self.test_dataloader.iter(opt.test_batches) do
         local data_time = timer:time().real
 
         local batch_size = (#labels.a)[1]
