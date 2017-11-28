@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 19:01:38
+-- @Last Modified time: 2017-11-28 12:03:17
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -177,9 +177,6 @@ function Trainer:test()
         self.crit:forward(self.net.output, self.labels)
 
         local compute_time = timer:time().real
-
-        topv, topi = self.net.output[1]:topk(5)
-        acc = topi:eq(labels[1]:long():view(-1, 1):expandAs(topi))
 
         local top1, top5 = self:accuracy(self.net.output, labels)
         top1_sum = top1_sum + top1
