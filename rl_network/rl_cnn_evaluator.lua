@@ -12,20 +12,11 @@ local common = require("common.common")
 local board = require('board.board')
 local util_pkg = require 'common.util_package'
 local threads = require 'threads'
+local opt_internal = require("rl_network.rl_cnn_evaluator_opt")
 
 utils.require_torch()
 utils.require_cutorch()
 threads.serialization('threads.sharedserialize')
-
-local opt = pl.lapp[[
-  -g,--gpu  (default 3)                      GPU id to use.
-  --async                                    Make it asynchronized.
-  --pipe_path (default "../../dflog")                 Path for pipe file. Default is in the current directory, i.e., go/mcts
-  --codename  (default "darkfores2")         Code name for the model to load.
-  --use_local_model                          If true, load the local model.
-]]
-
-local opt_internal = opt
 
 local symbols, s = utils.ffi_include("../local_evaluator/cnn_local_exchanger.h")
 local C = ffi.load("../libs/liblocalexchanger.so")
