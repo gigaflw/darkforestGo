@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-28 12:03:17
+-- @Last Modified time: 2017-11-29 18:31:48
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -55,6 +55,7 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
         self.inputs = torch.CudaTensor()
         self.labels = {torch.CudaTensor(), torch.CudaTensor()}
     else
+        require 'nn'
         -- size is adpated to the dataset while training/testing
         self.inputs = torch.FloatTensor()
         self.labels = {torch.FloatTensor(), torch.FloatTensor()}

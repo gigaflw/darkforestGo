@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 19:12:29
+-- @Last Modified time: 2017-11-29 16:33:19
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -19,7 +19,7 @@ local board_to_features = argcheck{
         extracts 17 feature planes
         return a 17 x 19 x 19 tensor.
 
-        Assume out stones at this time to be X_t (19 x 19), opponent's to be Y_t
+        Assume our stones at this time to be X_t (19 x 19), opponent's to be Y_t
         Then the feature planes: (according to AlphaGo Zero thesis)
         s_t = [X_t, Y_t, X_{t-1}, Y_{t-1}, ..., X_{t-7}, Y_{t-7}, C]
         where C is all 1 if we are black, 0 if white.
