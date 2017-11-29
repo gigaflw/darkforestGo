@@ -39,18 +39,22 @@ end
 
 function self_play_mcts.train(callbacks, opt)
     rl_player = RLPlayer(callbacks, opt)
-    rl_player:clear_board()
-    while true do
-        local s, str, res = rl_player:g()
-        if not s then
-            io.stderr:write("\n" .. str .. "\n")
-            break
-        else
-            if str == "resign" then
-                local _, score = rl_player:final_score()
-                io.stderr:write("\nFinal Score: " .. score .. "\n")
-                save_sgf_file(res, opt)
+    local total_play = 1
+    for i=1, total_play do
+        io.stderr:write("\nCurrent training: " .. i .. "/" .. total_play .. "\n")
+        rl_player:clear_board()
+        while true do
+            local s, str, res = rl_player:g()
+            if not s then
+                io.stderr:write("\n" .. str .. "\n")
                 break
+            else
+                if str == "resign" then
+                    local _, score = rl_player:final_score()
+                    io.stderr:write("\nFinal Score: " .. score .. "\n")
+                    save_sgf_file(res, opt)
+                    break
+                end
             end
         end
     end
