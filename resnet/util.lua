@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-29 18:31:05
+-- @Last Modified time: 2017-11-30 07:53:20
 
 require 'nn'  -- necessary because checkpoints use nn modeul
 local CBoard = require 'board.board'
@@ -22,7 +22,7 @@ function play(model, board_history, player)
         @param: player:
             `common.black` or `common.white`
         @return: a table like this:
-            { 1: < 362-d vector, a probability for all moves>, 2: < -1~1, current player's winning rate > }
+            { 1: < 362-d vector, a probability for all moves, sum to 1 >, 2: < -1~1, current player's winning rate > }
             where
                 vector[362] is the prob for pass
                 vector[idx] is the prob for goutils.moveIdx2xy(idx)
@@ -36,6 +36,7 @@ function play(model, board_history, player)
 
     input:narrow(2, 17, 1):fill(player == common.black and 1 or 0)
     output = model:forward(input)
+    output[1] = nn.SoftMax():forward(output[1]:double())
     return output
 end
 
@@ -50,3 +51,5 @@ function demo()
     end
     out = play(net, board_history, common.black)
 end
+
+demo()
