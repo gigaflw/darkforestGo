@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 19:07:26
+-- @Last Modified time: 2017-11-29 16:24:40
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -12,6 +12,47 @@ local Conv = nn.SpatialConvolution
 local ReLU = nn.ReLU
 local Linear = nn.Linear
 local BatchNorm = nn.SpatialBatchNormalization
+
+local doc = [[
+    The resnet model is like this:
+
+             Conv
+       Batch normalization
+             ReLU
+        Residual Tower
+         /           \
+    Policy Head    Value Head
+
+    where
+    Residual Tower: comprise of `opt.n_res` residual blocks
+    Policy Head: Conv - BN - ReLU - Linear
+    Value  Head: Conv - BN - ReLU - Linear - ReLU - Linear - Tanh
+
+    * input & output:
+
+    input:
+        batch_size x feature_plane x 19 x 19
+    policy output:
+        batch_size x 362
+        a probability for positions for next move
+        (19*19+1, +1 for `pass` move)
+    value output:
+        batch_size
+        a vector for winning rate in (-1, 1)
+
+    * usage:
+    > net = create_model(opt)
+    > output = net:forward(input)
+    > print(output)
+    {
+        1: <policy output> 
+        2: <Value output>
+    }
+    > crit = create_criterion(opt)
+    > loss = crit:forward(output, label)  -- label should be a table like output
+    > print(loss)                         -- loss = policy_loss + value_loss + other_loss
+    <a float>
+]]
 
 local function create_model(opt)
     assert(opt.n_res, "ResNet: No opt.n_res assigned")
@@ -39,8 +80,8 @@ local function create_model(opt)
     end
 
     -- Creates count residual blocks with specified number of features
-    -- in: batch_size x 19 x 19 x 256
-    -- out: batch_size x 19 x 19 x 256, identical shape
+    -- in: batch_size x 256 x 19 x 19
+    -- out: batch_size x 256 x 19 x 19, identical shape
     local function residualTower(n_residual_blocks)
         local s = nn.Sequential()
         for i= 1, n_residual_blocks do
