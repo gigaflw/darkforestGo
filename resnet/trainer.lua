@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-30 08:17:06
+-- @Last Modified time: 2017-11-30 13:17:49
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -220,10 +220,12 @@ end
 
 function Trainer:save(epoch, filename)
     local obj = {
-        net = self.net,
         epoch = epoch,
+        net = self.net,
         opt = self.opt,
+        optim_state = self.optim_state
     }
+    obj.optim_state.dfdx = nil -- at the cost of losing momentum, shrink ckpt's size
     torch.save(paths.concat(self.opt.ckpt_dir, filename), obj)
     print("checkpoint '"..filename.."' saved")
 end
@@ -232,8 +234,11 @@ function Trainer:load(filename)
     filename = filename or 'latest.params'
     local obj = torch.load(paths.concat(self.opt.ckpt_dir, filename))
     self.net = obj.net
+    self.opt = obj.opt
     self.optim_state = obj.optim_state
     print("checkpoint '"..filename.."' loaded")
+    print("checkpoint epoch: "..obj.epoch)
+
 end
 
 return Trainer
