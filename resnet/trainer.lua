@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-30 14:19:16
+-- @Last Modified time: 2017-11-30 14:54:15
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -203,7 +203,7 @@ function Trainer:accuracy(outputs, labels)
     local a, z = labels[1], labels[2]
     local batch_size = (#v)[1]
 
-    topv, topi = p:topk(5)
+    topv, topi = (-p):topk(5) -- topk return the k smallest
     if self.opt.use_gpu then
         acc = topi:eq(a:cudaLong():view(-1, 1):expandAs(topi))
     else
