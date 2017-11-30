@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-30 08:17:24
+-- @Last Modified time: 2017-11-30 14:16:38
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -10,6 +10,7 @@ doc = [[
 local pl = require 'pl.import_into'()
 local opt = pl.lapp[[
     --test               If true, only run the test epoch
+    --log_file           (default '')       If given, log will be saved
 
     ** Dataset Options  **
     --batch_size         (default 24)       The number of positions in each batch, 2048 in AlphaGo Zero thesis
@@ -42,7 +43,7 @@ local opt = pl.lapp[[
 if opt.use_gpu then
     require 'cutorch'
     cutorch.setDevice(opt.device)
-    print()
+    print('use gpu device '..opt.device)
 end
 
 local resnet = require 'resnet.resnet'

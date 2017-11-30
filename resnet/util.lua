@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-30 07:53:20
+-- @Last Modified time: 2017-11-30 13:45:13
 
 require 'nn'  -- necessary because checkpoints use nn modeul
 local CBoard = require 'board.board'
@@ -51,5 +51,3 @@ function demo()
     end
     out = play(net, board_history, common.black)
 end
-
-demo()

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-29 16:33:19
+-- @Last Modified time: 2017-11-30 13:54:00
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'

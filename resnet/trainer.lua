@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-30 13:17:49
+-- @Last Modified time: 2017-11-30 14:19:16
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -80,7 +80,7 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
 
     self.all_params, self.all_params_grad = self.net:getParameters()
      -- all_params_grad will store d(loss)/d(all parameters)
-    print(string.format("The network has %d trainable parameters", (#self.all_params)[1]))
+    self:log(string.format("The network has %d trainable parameters", (#self.all_params)[1]))
 end
 
 function Trainer:train()
@@ -94,8 +94,8 @@ function Trainer:train()
 
     self.net:training() -- set the model to training mode (this will affect dropout and batch normalization)
 
-    print('Training starts')
-    local timer = torch.Timer()
+    self:log('Training starts')
+    local timer, epoch_timer = torch.Timer(), torch.Timer()
 
     for e = 1, opt.epochs do
         for ind, inputs, labels in self.train_dataloader.iter(opt.max_batches) do
@@ -121,11 +121,14 @@ function Trainer:train()
             local update_time = timer:time().real
             local top1, top5 = self:accuracy(self.net.output, labels)
 
-            print(string.format("| Epoch %d [%02d/%02d], data time: %.3fs, time: %.3fs, loss: %4f, top1 acc: %.5f%%, top5 acc: %.5f%%",
-                e, ind, opt.max_batches, data_time, update_time - data_time, self.crit.output, top1 * 100, top5 * 100))
+            self:log(string.format(
+                "| Epoch %d [%02d/%02d], data time: %.3fs, time: %.3fs, loss: %4f, top1 acc: %.5f%%, top5 acc: %.5f%%",
+                e, ind, opt.max_batches, data_time, update_time - data_time, self.crit.output, top1 * 100, top5 * 100
+            ))
             timer:reset()
         end
 
+        self:log(string.format("| Epoch %d ends in %.4fs", e, epoch_timer:time().real))
         ----------------------------
         -- save ckpt & test
         ----------------------------
@@ -138,13 +141,16 @@ function Trainer:train()
         if math.fmod(e, opt.epoch_per_test) == 0 then
             self:test()
         end
+
+        timer:reset()
+        epoch_timer:reset()
     end
 
     if math.fmod(opt.epochs, opt.epoch_per_ckpt) ~= 0 then
         self.net:clearState()
         self:save(string.format('e%04d.params', opt.epochs))
     end
-    print("Training ends")
+    self:log("Training ends")
 end
 
 function Trainer:test()
@@ -157,7 +163,7 @@ function Trainer:test()
     end
     self.net:evaluate() -- set the model to non-training mode (this will affect dropout and batch normalization)
 
-    print('Test starts')
+    self:log('Test starts')
     local epoch_loss, top1_sum, top5_sum, batches = 0.0, 0.0, 0.0, 0
     local timer = torch.Timer()
 
@@ -179,15 +185,17 @@ function Trainer:test()
         epoch_loss = epoch_loss + self.crit.output
         batches = batches + 1
 
-        print(string.format("* Test [%d/%d], data time: %.3fs , time: %.3fs, loss: %4f, top1 acc: %.5f%%, top5 acc: %.5f%%",
-            ind, opt.test_batches, data_time, compute_time - data_time, self.crit.output, top1 * 100, top5 * 100))
+        self:log(string.format(
+            "* Test [%d/%d], data time: %.3fs , time: %.3fs, loss: %4f, top1 acc: %.5f%%, top5 acc: %.5f%%",
+            ind, opt.test_batches, data_time, compute_time - data_time, self.crit.output, top1 * 100, top5 * 100)
+        )
         timer:reset()
     end
     self.net:training()
 
-    print(string.format("* **\n* Tested %d batches, aver loss: %.5f, top1 acc: %.5f%% top5 acc: %.5f%%\n* **",
+    self:log(string.format("* **\n* Tested %d batches, aver loss: %.5f, top1 acc: %.5f%% top5 acc: %.5f%%\n* **",
             batches, epoch_loss / batches, top1_sum / batches * 100, top5_sum / batches * 100))
-    print('Test ends')
+    self:log('Test ends')
 end
 
 function Trainer:accuracy(outputs, labels)
@@ -227,7 +235,7 @@ function Trainer:save(epoch, filename)
     }
     obj.optim_state.dfdx = nil -- at the cost of losing momentum, shrink ckpt's size
     torch.save(paths.concat(self.opt.ckpt_dir, filename), obj)
-    print("checkpoint '"..filename.."' saved")
+    self:log("checkpoint '"..filename.."' saved")
 end
 
 function Trainer:load(filename)
@@ -236,9 +244,18 @@ function Trainer:load(filename)
     self.net = obj.net
     self.opt = obj.opt
     self.optim_state = obj.optim_state
-    print("checkpoint '"..filename.."' loaded")
-    print("checkpoint epoch: "..obj.epoch)
+    self:log("checkpoint '"..filename.."' loaded")
+    self:log("checkpoint epoch: "..obj.epoch)
 
+end
+
+function Trainer:log(message)
+    print(message)
+    if self.opt.log_file ~= '' then
+        local f = io.open(self.opt.log_file, 'a')
+        f:write(message..'\n')
+        f:close()
+    end
 end
 
 return Trainer
