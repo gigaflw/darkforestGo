@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-29 18:31:48
+-- @Last Modified time: 2017-11-30 08:17:06
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -65,13 +65,8 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
     self.test_dataloader = test_dataloader
 
     self.opt = {}
-    setmetatable(self.opt, {
-        __index = function(t, key)
-            local val = opt[key] or default_opt[key]
-            assert(val ~= nil, "Trainer: option '"..key.."' not found!")
-            return val
-        end
-    })
+    table.foreach(default_opt, function (k) self.opt[k] = default_opt[k] end)
+    table.foreach(opt, function (k) self.opt[k] = opt[k] end)  -- will override default opt
 
     lfs.mkdir(opt.ckpt_dir)  -- nothing will happen if the dir already exists
 
@@ -134,14 +129,13 @@ function Trainer:train()
         ----------------------------
         -- save ckpt & test
         ----------------------------
+        self.net:clearState()
         if math.fmod(e, opt.epoch_per_ckpt) == 0 then
-            self.net:clearState()
-            self:save(string.format('e%04d.params', e))
+            self:save(e, string.format('e%04d.params', e))
         else
-            self:save() -- save 'latest.params' every epoch
+            self:save(e, 'latest.params') -- save 'latest.params' every epoch
         end
         if math.fmod(e, opt.epoch_per_test) == 0 then
-            self.net:clearState()
             self:test()
         end
     end
@@ -224,14 +218,14 @@ function Trainer:copy_data(inputs, labels)
     end
 end
 
-function Trainer:save(filename)
+function Trainer:save(epoch, filename)
     local obj = {
         net = self.net,
-        optim_state = self.optim_state
+        epoch = epoch,
+        opt = self.opt,
     }
-    if filename then torch.save(paths.concat(self.opt.ckpt_dir, filename), obj) end
-    torch.save(paths.concat(self.opt.ckpt_dir, 'latest.params'), obj)
-    print("checkpoint '"..(filename or 'latest').."' saved")
+    torch.save(paths.concat(self.opt.ckpt_dir, filename), obj)
+    print("checkpoint '"..filename.."' saved")
 end
 
 function Trainer:load(filename)

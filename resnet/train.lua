@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-27 19:16:03
+-- @Last Modified time: 2017-11-30 08:17:24
 
 doc = [[
     The following script should always be the entrance of the training procedure
