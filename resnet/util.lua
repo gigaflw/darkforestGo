@@ -3,11 +3,17 @@
 -- @Last Modified by:   gigaflw
 -- @Last Modified time: 2017-11-30 13:45:13
 
-require 'nn'  -- necessary because checkpoints use nn modeul
+local utils = require("utils.utils")
+
+utils.require_torch()
+utils.require_cutorch()
+
 local CBoard = require 'board.board'
 local common = require 'common.common'
 
-function play(model, board_history, player)
+local util = {}
+
+function util.play(model, board_history, player)
     doc = [[
         @param: model:
             a network given by `resnet.resnet.create_model' or `torch.load(<ckpt>)`
@@ -27,7 +33,7 @@ function play(model, board_history, player)
                 vector[362] is the prob for pass
                 vector[idx] is the prob for goutils.moveIdx2xy(idx)
     ]]
-    local input = torch.FloatTensor(1, 17, 19, 19):zero()
+    local input = torch.CudaTensor(1, 17, 19, 19):zero()
 
     for i = 1, 8 do
         input[1][2*i-1] = CBoard.get_stones(board_history[i], player)
@@ -51,3 +57,5 @@ function demo()
     end
     out = play(net, board_history, common.black)
 end
+
+return util

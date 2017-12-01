@@ -4,18 +4,25 @@
 --
 
 local utils = require("utils.utils")
+
+utils.require_torch()
+utils.require_cutorch()
+
+cutorch.setDevice(3)
+
 local board = require("board.board")
 local om = require("board.ownermap")
 local dp = require("pachi_tactics.moggy")
 local dcnn_utils = require("board.dcnn_utils")
 local sgf = require("utils.sgf")
 local common = require("common.common")
-
-local mcts_v2 = require("cnnPlayerV2.cnnPlayerMCTSV2")
-
+local rl_utils = require("rl_network.rl_utils")
+local model = torch.load("../resnet.ckpt/latest.params")
+local pl = require 'pl.import_into'()
 
 local def_policy = dp.new()
 local ownermap = om.new()
+local net = model.net
 
 local self_play = {}
 
@@ -50,10 +57,13 @@ end
 function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
     -- One game of self play.
     local moves = {}
+    local board_history = {}
+
     while true do
-        if opt.debug then
-            board.show(b, 'last_move')
-        end
+
+        print(board_history[1])
+        print(board_history[2])
+
         local m = {}
         -- Resign if one side loses too much.
         if b._ply >= 140 and b._ply % 20 == 1 then
@@ -76,7 +86,12 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
 
         -- Generate move
         local dcnn_opt = b._next_player == common.black and dcnn_opt1 or dcnn_opt2
-        local x, y = dcnn_utils.sample(dcnn_opt, b, b._next_player)
+        local x, y
+        if dcnn_opt.codename == "resnet" then
+            x, y = rl_utils.play_with_cnn(b, board_history, b._next_player, net)
+        else
+            x, y = dcnn_utils.sample(dcnn_opt, b, b._next_player)
+        end
 
         if x == nil then
             local player_str = b._next_player == common.white and 'W' or 'B'
@@ -91,6 +106,11 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
         table.insert(moves, m)
 
         board.play(b, x, y, b._next_player)
+
+        local board_copy = pl.tablex.deepcopy(b)
+        table.insert(board_history, board_copy)
+
+        if #board_history >= 2 then break end
 
         if board.is_game_end(b) then
             break
