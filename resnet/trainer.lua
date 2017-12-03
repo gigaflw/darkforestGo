@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-30 14:54:15
+-- @Last Modified time: 2017-12-03 11:23:32
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -242,7 +242,7 @@ function Trainer:load(filename)
     filename = filename or 'latest.params'
     local obj = torch.load(paths.concat(self.opt.ckpt_dir, filename))
     self.net = obj.net
-    self.opt = obj.opt
+    -- self.opt = obj.opt  -- should not reload opt, saved opt are only for memo
     self.optim_state = obj.optim_state
     self:log("checkpoint '"..filename.."' loaded")
     self:log("checkpoint epoch: "..obj.epoch)
