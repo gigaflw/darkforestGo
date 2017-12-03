@@ -8,7 +8,7 @@ local utils = require("utils.utils")
 utils.require_torch()
 utils.require_cutorch()
 
-cutorch.setDevice(3)
+cutorch.setDevice(1)
 
 local board = require("board.board")
 local om = require("board.ownermap")
@@ -17,7 +17,7 @@ local dcnn_utils = require("board.dcnn_utils")
 local sgf = require("utils.sgf")
 local common = require("common.common")
 local rl_utils = require("rl_network.rl_utils")
-local model = torch.load("../resnet.ckpt/latest.params")
+local model = torch.load("../resnet.ckpt/second/e0300.params")
 local pl = require 'pl.import_into'()
 
 local def_policy = dp.new()
@@ -60,9 +60,6 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
     local board_history = {}
 
     while true do
-
-        print(board_history[1])
-        print(board_history[2])
 
         local m = {}
         -- Resign if one side loses too much.
@@ -110,7 +107,7 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
         local board_copy = pl.tablex.deepcopy(b)
         table.insert(board_history, board_copy)
 
-        if #board_history >= 2 then break end
+--        if #board_history >= 2 then break end
 
         if board.is_game_end(b) then
             break

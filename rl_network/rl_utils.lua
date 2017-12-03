@@ -13,22 +13,23 @@ local pl = require 'pl.import_into'()
 local rl_utils = {}
 
 function rl_utils.sample(probs)
---    local cum_prob = torch.cumsum(probs, 1)
---    local needle = torch.rand(1)[1] * cum_prob[1][cum_prob:size(2)]
---
---    local index = -1
---    for i = 1, cum_prob:size(2) do
---        if needle < cum_prob[i][1] then
---            index = i
---            break
---        end
---    end
 
-    print(probs)
-    local _, index = torch.max(probs, 1)
-    print(index)
+    local cum_prob = torch.cumsum(probs, 1)
+    local needle = torch.rand(1)[1]*cum_prob[cum_prob:size()]
 
-    return index[1]
+    local index = -1
+    for i = 1, cum_prob:size()[1] do
+        if needle < cum_prob[i] then
+            index = i
+            break
+        end
+    end
+
+--    print(probs)
+--    local _, index = torch.max(probs, 1)
+--    print(index)
+
+    return index
 end
 
 function rl_utils.play_with_cnn(b, board_history, player, net)
@@ -44,19 +45,28 @@ function rl_utils.play_with_cnn(b, board_history, player, net)
 
     local output = resnet_util.play(net, recent_board, player)
     local probs, win_rate = output[1], output[2]
-    local index = rl_utils.sample(probs)
+    local x, y
 
-    -- pass move
-    if index == 362 then
-        index = 0
+    local max_iter, iter = 300, 1
+    while iter < max_iter do
+        local index = rl_utils.sample(probs)
+
+        -- pass move
+        local idx = index == 362 and 0 or index
+
+        x, y = goutils.moveIdx2xy(idx)
+        local check_res, comment = goutils.check_move(b, x, y, player)
+
+        if check_res then
+            break
+        else
+            probs[index] = 0
+            iter = iter + 1
+        end
     end
 
-    local x, y = goutils.moveIdx2xy(index)
-
-    local check_res, comment = goutils.check_move(b, x, y, player)
-    if not check_res then
-        io.stderr:write(string.format("(%d, %d), %s!", x, y, comment));
-        return
+    if iter >= max_iter then
+        print("not find a valid move in ", max_iter, " iterations ..")
     end
 
     return x, y, win_rate
