@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-03 11:23:32
+-- @Last Modified time: 2017-12-04 09:02:27
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -38,6 +38,8 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
             end
             all float tensors
     ]]
+    
+    self._epoch = 1
 
     self.crit = crit
     self.optim = (require 'optim').sgd
@@ -73,7 +75,7 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
     if type(net) == 'string' then
         self:load(net)
     elseif opt.resume_ckpt ~= '' then
-        self:load(opt.resume_ckpt)
+        self:load(opt.resume_ckpt, opt.continue)
     else
         self.net = net
     end
@@ -97,7 +99,9 @@ function Trainer:train()
     self:log('Training starts')
     local timer, epoch_timer = torch.Timer(), torch.Timer()
 
-    for e = 1, opt.epochs do
+    while self._epoch <= opt.epochs do
+        local e = self._epoch
+
         for ind, inputs, labels in self.train_dataloader.iter(opt.max_batches) do
             labels = {labels.a, labels.z} -- array is needed for training, not table
             self:copy_data(inputs, labels) -- move data to gpu if in gpu mode
@@ -142,6 +146,7 @@ function Trainer:train()
             self:test()
         end
 
+        self._epoch = e + 1
         timer:reset()
         epoch_timer:reset()
     end
@@ -238,15 +243,20 @@ function Trainer:save(epoch, filename)
     self:log("checkpoint '"..filename.."' saved")
 end
 
-function Trainer:load(filename)
+function Trainer:load(filename, continue)
     filename = filename or 'latest.params'
     local obj = torch.load(paths.concat(self.opt.ckpt_dir, filename))
     self.net = obj.net
-    -- self.opt = obj.opt  -- should not reload opt, saved opt are only for memo
-    self.optim_state = obj.optim_state
+
     self:log("checkpoint '"..filename.."' loaded")
     self:log("checkpoint epoch: "..obj.epoch)
 
+    if continue then
+        -- self.opt = obj.opt  -- should not be reloaded, saved opt are only for memo
+        self.optim_state.evalCounter = obj.optim_state.evalCounter  -- this counter is used to calc lrdecay
+        self._epoch = obj.epoch + 1
+        self:log("Start from epoch "..self._epoch)
+    end
 end
 
 function Trainer:log(message)

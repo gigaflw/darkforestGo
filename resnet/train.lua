@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-30 14:16:38
+-- @Last Modified time: 2017-12-04 08:58:02
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -25,6 +25,7 @@ local opt = pl.lapp[[
     --epoch_per_ckpt     (default 10)       The number of epochs per saving checkpoints
     --ckpt_dir           (default './resnet.ckpt')    Where to store the checkpoints
     --resume_ckpt        (default '')       Whether resume some checkpoints before training
+    --continue                              Whether resume epochs (otherwise epoch will begin with 1)
 
     ** GPU Options  **
     --use_gpu
