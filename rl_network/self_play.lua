@@ -8,7 +8,7 @@ local utils = require("utils.utils")
 utils.require_torch()
 utils.require_cutorch()
 
-cutorch.setDevice(1)
+cutorch.setDevice(2)
 
 local board = require("board.board")
 local om = require("board.ownermap")
@@ -63,7 +63,7 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
 
         local m = {}
         -- Resign if one side loses too much.
-        if b._ply >= 140 and b._ply % 20 == 1 then
+        if opt.resign and b._ply >= 140 and b._ply % 20 == 1 then
             local resign_side, score, min_score, max_score = self_play.check_resign(b, opt)
             if opt.debug then
                 print(string.format('score = %.1f, min_score = %.1f, max_score = %.1f', score, min_score, max_score))
@@ -107,8 +107,6 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
         local board_copy = pl.tablex.deepcopy(b)
         table.insert(board_history, board_copy)
 
---        if #board_history >= 2 then break end
-
         if board.is_game_end(b) then
             break
         end
@@ -128,13 +126,12 @@ function self_play.train(b, dcnn_opt1, dcnn_opt2, opt)
     for i = 1, opt.num_games do
         print(string.format("Play game: %d/%d", i, opt.num_games))
         board.clear(b)
-        local sample_step = math.random(390)
         local res = self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
-        if #res.moves <= sample_step then
-            print(string.format("Bad sample --- moves: %d, sample_step: %d", #res.moves, sample_step))
+        if #res.moves <= opt.sample_step then
+            print(string.format("Bad sample --- moves: %d, sample_step: %d", #res.moves, opt.sample_step))
         else
             -- Write the SGF file
-            local footprint = string.format("%s-%s__%d", utils.get_signature(), utils.get_randString(6), sample_step)
+            local footprint = string.format("%s-%s__%d", utils.get_signature(), utils.get_randString(6), opt.sample_step)
             local srcSGF = string.format("%s.sgf", footprint)
             local f = assert(io.open(srcSGF, 'w'))
             local re

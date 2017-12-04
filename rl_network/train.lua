@@ -11,10 +11,12 @@ local board = require("board.board")
 local pl = require 'pl.import_into'()
 
 local opt = pl.lapp[[
-    --codename1            (default "resnet")   Code name AI1 for models. If this is not empty then --input will be omitted.
-    --codename2            (default "resnet")   Code name AI2 for models.
+    --codename1            (default "resnet")       Code name AI1 for models. If this is not empty then --input will be omitted.
+    --codename2            (default "resnet")       Code name AI2 for models.
     -f,--feature_type      (default "old")          By default we only rl_network old features. If codename is specified, this is omitted.
     -r,--rank              (default "9d")           We play in the level of rank.
+    --sample_step          (default 1)              Sample step, if the step of a game is smaller, it is a bad sample.
+    --resign                                        Whether support resign in rl_training.
     --use_local_model                               Whether we just load local model from the current path
     --komi                 (default 7.5)            The komi we used
     --handi                (default 0)              The handicap stones we placed.

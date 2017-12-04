@@ -14,22 +14,21 @@ local rl_utils = {}
 
 function rl_utils.sample(probs)
 
-    local cum_prob = torch.cumsum(probs, 1)
-    local needle = torch.rand(1)[1]*cum_prob[cum_prob:size()]
+--    local cum_prob = torch.cumsum(probs, 1)
+--    local needle = torch.rand(1)[1]*cum_prob[cum_prob:size()]
+--
+--    local index = -1
+--    for i = 1, cum_prob:size()[1] do
+--        if needle < cum_prob[i] then
+--            index = i
+--            break
+--        end
+--    end
+--
+--    return index
 
-    local index = -1
-    for i = 1, cum_prob:size()[1] do
-        if needle < cum_prob[i] then
-            index = i
-            break
-        end
-    end
-
---    print(probs)
---    local _, index = torch.max(probs, 1)
---    print(index)
-
-    return index
+    local _, index = torch.max(probs, 1)
+    return index[1]
 end
 
 function rl_utils.play_with_cnn(b, board_history, player, net)
@@ -47,16 +46,19 @@ function rl_utils.play_with_cnn(b, board_history, player, net)
     local probs, win_rate = output[1], output[2]
     local x, y
 
-    local max_iter, iter = 300, 1
+    local max_iter, iter = 363, 1
     while iter < max_iter do
         local index = rl_utils.sample(probs)
 
         -- pass move
-        local idx = index == 362 and 0 or index
+        if index == 362 then
+            x, y = 0, 0
+            break
+        end
 
-        x, y = goutils.moveIdx2xy(idx)
+        x, y = goutils.moveIdx2xy(index)
+
         local check_res, comment = goutils.check_move(b, x, y, player)
-
         if check_res then
             break
         else
