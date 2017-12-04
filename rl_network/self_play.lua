@@ -131,7 +131,7 @@ function self_play.train(b, dcnn_opt1, dcnn_opt2, opt)
             print(string.format("Bad sample --- moves: %d, sample_step: %d", #res.moves, opt.sample_step))
         else
             -- Write the SGF file
-            local footprint = string.format("%s-%s__%d", utils.get_signature(), utils.get_randString(6), opt.sample_step)
+            local footprint = string.format("%s-%s__%d", utils.get_signature(), utils.get_randString(6), b._ply)
             local srcSGF = string.format("%s.sgf", footprint)
             local f = assert(io.open(srcSGF, 'w'))
             local re

@@ -39,9 +39,8 @@ end
 
 function self_play_mcts.train(callbacks, opt)
     rl_player = RLPlayer(callbacks, opt)
-    local total_play = 1
-    for i=1, total_play do
-        io.stderr:write("\nCurrent training: " .. i .. "/" .. total_play .. "\n")
+    for i=1, opt.num_games do
+        io.stderr:write("\nCurrent training: " .. i .. "/" .. opt.num_games .. "\n")
         rl_player:clear_board()
         while true do
             local s, str, res = rl_player:g()

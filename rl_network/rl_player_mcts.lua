@@ -305,23 +305,37 @@ function rl_player:genmove(player)
             if self.cbs.move_receiver then
                 self.cbs.move_receiver(0, 0, player)
             end
-            return true, "pass"
+            return true, "resign", {
+                resign_side = 0,
+                score = stats.score,
+                min_score = stats.min_score,
+                max_score = stats.max_score
+            }
         end
     end
 
-    if self.b._ply >= 140 and self.b._ply % 20 == 1 then
+    if self.opt.resign and self.b._ply >= 140 and self.b._ply % 20 == 1 then
         io.stderr:write("Check whether we have screwed up...")
-        local resign_side, score, min_score, max_score = self:check_resign()
-        if self.opt.debug then
-            print(string.format('score = %.1f, min_score = %.1f, max_score = %.1f', score, min_score, max_score))
-        end
-        if resign_side then
+        local resign_thres = 10
+        local _, _, _, scores = self:score()
+        if (player == common.white and scores.min_score > resign_thres) or (player == common.black and scores.max_score < -resign_thres) then
             return true, "resign", {
-                resign_side = resign_side,
-                score = score,
-                min_score = min_score,
-                max_score = max_score
+                resign_side = player,
+                score = scores.score,
+                min_score = scores.min_score,
+                max_score = scores.max_score
             }
+        end
+        if scores.min_score == scores.max_score and scores.max_score == scores.score then
+            -- The estimation is believed to be absolutely correct.
+            if (player == common.white and scores.score > 0.5) or (player == common.black and scores.score < -0.5) then
+                return true, "resign", {
+                    resign_side = player,
+                    score = scores.score,
+                    min_score = scores.min_score,
+                    max_score = scores.max_score
+                }
+            end
         end
     end
 
@@ -344,16 +358,6 @@ function rl_player:genmove(player)
 --    if self.cbs.move_receiver then
 --        self.cbs.move_receiver(xf, yf, player)
 --    end
-
-    if board.is_game_end(self.b) then
-        local _, score, min_score, max_score = self:check_resign()
-        return true, "resign", {
-            resign_side = 0,
-            score = score,
-            min_score = min_score,
-            max_score = max_score
-        }
-    end
 
     -- Check if we need to adjust parameters in the engine.
     if self.cbs.adjust_params_in_game then

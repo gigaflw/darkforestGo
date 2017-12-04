@@ -17,10 +17,12 @@ utils.require_torch()
 utils.require_cutorch()
 
 local opt = pl.lapp[[
-    --rollout         (default 10)         The number of rollout we use.
+    --rollout         (default 10)           The number of rollout we use.
     --dcnn_rollout    (default -1)           The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
     --dp_max_depth    (default 10000)        The max_depth of default policy.
     -v,--verbose      (default 1)            The verbose level (1 = critical, 2 = info, 3 = debug)
+    --num_games         (default 1)          The number of games to be played.
+    --resign                                 Whether support resign in rl_training.
     --print_tree                             Whether print the search tree.
     --max_send_attempts (default 3)          #attempts to send to the server.
     --pipe_path         (default "../../dflog") Pipe path
@@ -270,7 +272,9 @@ local opt2 = {
     default_policy_pattern_file = opt.default_policy_pattern_file,
     default_policy_temperature = opt.default_policy_temperature,
     default_policy_sample_topn = opt.sample_topn,
-    save_sgf_per_move = opt.save_sgf_per_move
+    save_sgf_per_move = opt.save_sgf_per_move,
+    num_games = opt.num_games,
+    resign = opt.resign
 }
 
 self_play_mcts.train(callbacks, opt2)
