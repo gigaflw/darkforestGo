@@ -18,7 +18,6 @@ local class = require "class"
 
 local rl_player = class("RLPlayerMCTS")
 
-local disable_time_left = false
 local def_policy = dp_pachi.new()
 local ownermap = om.new()
 local moves = {}
@@ -37,64 +36,6 @@ end
 -- Init the RLPlayer
 function rl_player:__init(callbacks, opt)
     self.b, self.board_initialized = board.new(), false
-
-    -- set callbacks
-    -- possible callback:
-    -- 1. move_predictor(board, player)
-    --    call move_predictor when the bot is asked to generate a move. This is mandatory.
-    -- 2. move_receiver(x, y, player)
-    --    call move_receiver when the bot receives opponent moves.
-    -- 3. new_game()
-    --    When the client receives the comamnd of clear_board
-    -- 4. undo_func(prev_board, undone_move)
-    --    When the client click undo
-    -- 5. set_board(new_board)
-    --    Called when setup_board/clear_board is invoked
-    -- 6. set_komi(komi)
-    --    When komi's set.
-    -- 7. quit_func()
-    --    When qutting.
-    -- 8. thread_switch("on" or "off")
-    --    Switch on/off the computation process.
-    -- 9. set_move_history(moves) moves = { {x1, y1, player1}, {x2, y2, player2} }..
-    --    Set the history of the game. Called when setup_board is invoked.
-    --10. set_attention(x_left, y_top, x_right, y_bottom)
-    --    Set the attention of the engine (So that the AI will focus on the region more).
-    --11. adjust_params_in_game(board_situation)
-    --    Depending on the board situation, change the parameters.
-    --12. set_verbose_level(level)
-    --    Set the verbose level
-    --13. on_time_left(sec, num_move)
-    --    On time left.
-
-    local valid_callbacks = {
-        move_predictor = true,
-        move_receiver = true,
-        move_peeker = true,
-        new_game = true,
-        undo_func = true,
-        set_board = true,
-        set_komi = true,
-        quit_func = true,
-        thread_switch = true,
-        set_move_history = true,
-        set_attention = true,
-        adjust_params_in_game = true,
-        set_verbose_level = true,
-        get_value = true,
-        on_time_left = true,
-        peek_simulation = true
-    }
-
-    assert(callbacks)
-    assert(callbacks.move_predictor)
-
-    -- Check if there is any misnaming.
-    for k, f in pairs(callbacks) do
-        if not valid_callbacks[k] then error("The callback function " .. k .. " is not valid") end
-        if type(f) ~= 'function' then error("Callback " .. k .. " is not a function!") end
-    end
-
     self.cbs = callbacks
     self.name = "rl_player_MCTS"
     self.version = "1.0"
@@ -115,7 +56,6 @@ function rl_player:__init(callbacks, opt)
         self.opt = default_opt
     end
 
-    -- default to chinese rule
     local rule = (opt and opt.rule == "jp") and board.japanese_rule or board.chinese_rule
     self.rule = opt.rule
 
@@ -161,25 +101,6 @@ function rl_player:check_resign()
     return resign_side, score, min_score, max_score
 end
 
--- Set time left
-function rl_player:time_left(color, num_seconds, num_moves)
-    local thiscolor = (color:lower() == 'w' or color:lower() == 'white') and common.white or common.black
-    if self.mycolor and thiscolor == self.mycolor and num_seconds and num_moves then
-        io.stderr:write(string.format("timeleft -- color: %s, num_seconds: %s, num_moves: %s", color, num_seconds, num_moves))
-        if self.cbs.on_time_left then
-            if not disable_time_left then
-                self.cbs.on_time_left(tonumber(num_seconds), tonumber(num_moves))
-            else
-                print("Time left was disabled")
-            end
-        end
-    else
-        io.stderr:write(string.format("enemy timeleft -- color: %s, num_seconds: %s, num_moves: %s", color, num_seconds, num_moves))
-    end
-
-    return true
-end
-
 -- Write sgf
 function rl_player:add_to_sgf_history(x, y, player)
     table.insert(self.sgf_history, { x, y, player })
@@ -212,22 +133,15 @@ function rl_player:save_sgf(filename, opt, re)
 end
 
 function rl_player:clear_board()
-    -- To prevent additional overhead for clear_board twice.
-    if not self.board_history or #self.board_history > 0 or self.b._ply > 1 then
-        board.clear(self.b)
-        self.board_initialized = true
-        self.board_history = { }
-        self.sgf_history = { }
+    board.clear(self.b)
+    self.board_initialized = true
+    self.board_history = { }
+    self.sgf_history = { }
 
-        -- Default value.
-        self.val_komi = 6.5
-        self.val_handi = 0
-        self.mycolor = nil
-        -- Call the new game callback when the board is cleaned.
-        if self.cbs.new_game then
-            self.cbs.new_game()
-        end
-    end
+    self.val_komi = 6.5
+    self.val_handi = 0
+    self.cbs.new_game()
+
     return true
 end
 
@@ -271,8 +185,7 @@ function rl_player:score(show_more)
 end
 
 function rl_player:g()
-    local player = self.b._next_player == common.black and 'b' or 'w'
-    return self:genmove(player)
+    return self:genmove(self.b._next_player)
 end
 
 function rl_player:genmove(player)
@@ -282,10 +195,6 @@ function rl_player:genmove(player)
     end
     if player == nil then
         return false, "Player should not be null"
-    end
-    player = (player:lower() == 'w' or player:lower() == 'white') and common.white or common.black
-    if not self.mycolor then
-        self.mycolor = player
     end
     if not verify_player(self.b, player) then
         return false, "Invalid move!"
@@ -355,21 +264,14 @@ function rl_player:genmove(player)
         error("Illegal move from move_predictor! move: " .. move)
     end
 
---    if self.cbs.move_receiver then
---        self.cbs.move_receiver(xf, yf, player)
---    end
+--    self.cbs.move_receiver(xf, yf, player)
 
-    -- Check if we need to adjust parameters in the engine.
-    if self.cbs.adjust_params_in_game then
-        self.cbs.adjust_params_in_game(self.b)
-    end
+    self.cbs.adjust_params_in_game(self.b)
 
     self:add_to_sgf_history(xf, yf, player)
 
-    -- Keep this win rate.
     self.win_rate = win_rate
 
-    -- Tell the GTP server we have chosen this move
     return true, move, win_rate
 end
 

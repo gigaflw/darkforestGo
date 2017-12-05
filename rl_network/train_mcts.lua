@@ -17,7 +17,7 @@ utils.require_torch()
 utils.require_cutorch()
 
 local opt = pl.lapp[[
-    --rollout         (default 10)           The number of rollout we use.
+    --rollout         (default 1000)           The number of rollout we use.
     --dcnn_rollout    (default -1)           The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
     --dp_max_depth    (default 10000)        The max_depth of default policy.
     -v,--verbose      (default 1)            The verbose level (1 = critical, 2 = info, 3 = debug)
@@ -183,24 +183,34 @@ function callbacks.on_time_left(sec_left, num_moves)
 end
 
 function callbacks.new_game()
-    set_playout_params_from_opt(opt)
-
+--    set_playout_params_from_opt(opt)
+--
+--    if tr then
+--        playoutv2.restart(tr)
+--    else
+--        local rs = {
+--            rollout = opt.rollout,
+--            dcnn_rollout_per_move = (opt.dcnn_rollout == -1 and opt.rollout or opt.dcnn_rollout),
+--            rollout_per_move = opt.rollout
+--        }
+--
+--        tr = playoutv2.new(rs)
+--    end
+--    count = 0
+--    signature = utils.get_signature()
+--    io.stderr:write("New MCTS game, signature: " .. signature)
+--    os.execute("mkdir -p " .. paths.concat(opt.pipe_path, signature))
+--    playoutv2.print_params(tr)
+    set_playout_params_from_opt()
     if tr then
         playoutv2.restart(tr)
     else
-        local rs = {
-            rollout = opt.rollout,
-            dcnn_rollout_per_move = (opt.dcnn_rollout == -1 and opt.rollout or opt.dcnn_rollout),
-            rollout_per_move = opt.rollout
-        }
-
-        tr = playoutv2.new(rs)
+        tr = playoutv2.new({
+            rollout = 1000,
+            dcnn_rollout_per_move = 1000,
+            rollout_per_move = 1000,
+        })
     end
-    count = 0
-    signature = utils.get_signature()
-    io.stderr:write("New MCTS game, signature: " .. signature)
-    os.execute("mkdir -p " .. paths.concat(opt.pipe_path, signature))
-    playoutv2.print_params(tr)
 end
 
 function callbacks.quit_func()
@@ -227,14 +237,6 @@ end
 
 function callbacks.move_peeker(b, player, topk)
     return playoutv2.peek_rollout(tr, topk, b)
-end
-
-function callbacks.undo_func(b, undone_move)
-    if goutils.coord_is_pass(undone_move) then
-        playoutv2.undo_pass(tr, b)
-    else
-        playoutv2.set_board(tr, b)
-    end
 end
 
 function callbacks.set_board(b)

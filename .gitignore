@@ -9,6 +9,7 @@ cnnPlayerV2/game-*.sgf
 dataset/
 rl_network/sgf2gif/
 rl_network/rl_cnn_evaluator.sh
+rl_network/test.lua
 
 # IDE
 .idea/
