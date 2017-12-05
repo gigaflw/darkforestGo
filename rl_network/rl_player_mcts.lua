@@ -264,8 +264,6 @@ function rl_player:genmove(player)
         error("Illegal move from move_predictor! move: " .. move)
     end
 
---    self.cbs.move_receiver(xf, yf, player)
-
     self.cbs.adjust_params_in_game(self.b)
 
     self:add_to_sgf_history(xf, yf, player)

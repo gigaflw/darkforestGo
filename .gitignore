@@ -14,6 +14,7 @@ rl_network/test.lua
 # IDE
 .idea/
 CMakeLists.txt
+cmake-build-debug/
 
 # others
 .DS_Store

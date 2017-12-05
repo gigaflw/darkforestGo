@@ -183,34 +183,24 @@ function callbacks.on_time_left(sec_left, num_moves)
 end
 
 function callbacks.new_game()
---    set_playout_params_from_opt(opt)
---
---    if tr then
---        playoutv2.restart(tr)
---    else
---        local rs = {
---            rollout = opt.rollout,
---            dcnn_rollout_per_move = (opt.dcnn_rollout == -1 and opt.rollout or opt.dcnn_rollout),
---            rollout_per_move = opt.rollout
---        }
---
---        tr = playoutv2.new(rs)
---    end
---    count = 0
---    signature = utils.get_signature()
---    io.stderr:write("New MCTS game, signature: " .. signature)
---    os.execute("mkdir -p " .. paths.concat(opt.pipe_path, signature))
---    playoutv2.print_params(tr)
-    set_playout_params_from_opt()
+    set_playout_params_from_opt(opt)
+
     if tr then
         playoutv2.restart(tr)
     else
-        tr = playoutv2.new({
-            rollout = 1000,
-            dcnn_rollout_per_move = 1000,
-            rollout_per_move = 1000,
-        })
+        local rs = {
+            rollout = opt.rollout,
+            dcnn_rollout_per_move = (opt.dcnn_rollout == -1 and opt.rollout or opt.dcnn_rollout),
+            rollout_per_move = opt.rollout
+        }
+
+        tr = playoutv2.new(rs)
     end
+    count = 0
+    signature = utils.get_signature()
+    io.stderr:write("New MCTS game, signature: " .. signature)
+    os.execute("mkdir -p " .. paths.concat(opt.pipe_path, signature))
+    playoutv2.print_params(tr)
 end
 
 function callbacks.quit_func()
