@@ -19,6 +19,7 @@
 #include "../board/default_policy.h"
 #include "../tsumego/rank_move.h"
 #include "../board/pattern_v2.h"
+#include "tree.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
@@ -1847,6 +1848,16 @@ Move tree_search_pick_best(void *ctx, AllMoves *all_moves, const Board *verify_b
   // The root should never be NULL.
   TreeBlock *b = p->root->children[0].child;
 
+  for (int i = 0; i < b->n; ++i) {
+    Coord m = b->data.moves[i];
+    TreeBlock *tb = b->children[0].child;
+    if (tb != NULL) {
+        printf("GAME DATA: %d, %d, %d, %d\n", m, b->data.stats[i].total + 1, tb->data.moves[i], tb->data.stats[i].total + 1);
+    } else {
+        printf("GAME DATA: %d, %d\n", m, b->data.stats[i].total + 1);
+    }
+  }
+
   Coord best_m;
   TreeBlock *best_child = TP_NULL;
   all_moves->num_moves = 0;
@@ -1864,6 +1875,8 @@ Move tree_search_pick_best(void *ctx, AllMoves *all_moves, const Board *verify_b
   } else {
     best_m = pick_best(s, b, player, &best_score, &win_rate, &best_child);
   }
+
+  printf("GAME RESULT: %d\n", best_m);
 
   // Prepare for next search.
   prepare_search_complete(s);

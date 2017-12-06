@@ -17,7 +17,7 @@ local dcnn_utils = require("board.dcnn_utils")
 local sgf = require("utils.sgf")
 local common = require("common.common")
 local rl_utils = require("rl_network.rl_utils")
-local model = torch.load("../resnet.ckpt/second/e0300.params")
+local model = torch.load("../resnet.ckpt/second/e1600.params")
 local pl = require 'pl.import_into'()
 
 local def_policy = dp.new()
@@ -104,7 +104,7 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
 
         board.play(b, x, y, b._next_player)
 
-        local board_copy = pl.tablex.deepcopy(b)
+        local board_copy = board.copyfrom(b)
         table.insert(board_history, board_copy)
 
         if board.is_game_end(b) then

@@ -227,6 +227,16 @@ static BOOL send_to_cnn(ThreadInfo *info, TreeBlock *b, const Board *board) {
   TreeHandle *s = info->s;
   info->cnn_send_infunc ++;
 
+  for (int i = 0; i < 1; ++i) {
+    Coord m = b->data.moves[i];
+    TreeBlock *tb = b->parent;
+    if (tb != NULL) {
+      printf("LEAF: %d, %d, %d, %d\n", m, b->data.stats[i].total + 1, tb->data.moves[i], tb->data.stats[i].total + 1);
+    } else {
+      printf("LEAF: %d, %d\n", m, b->data.stats[i].total + 1);
+    }
+  }
+
   // If BIT_CNN_TRY_SEND has been set to 1, then someone else is sending the board, then we return.
   if (cnn_data_fetch_set_evaluated_bit(&b->cnn_data, BIT_CNN_TRY_SEND)) return FALSE;
 

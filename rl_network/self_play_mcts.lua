@@ -42,7 +42,8 @@ function self_play_mcts.train(callbacks, opt)
     for i=1, opt.num_games do
         io.stderr:write("\nCurrent training: " .. i .. "/" .. opt.num_games .. "\n")
         rl_player:clear_board()
-        while true do
+--        while true do
+        for j=1,1 do
             local s, str, res = rl_player:g()
             if not s then
                 io.stderr:write("\n" .. str .. "\n")

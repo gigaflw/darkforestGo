@@ -27,7 +27,9 @@ function rl_utils.sample(probs)
 --
 --    return index
 
+--    print(probs)
     local _, index = torch.max(probs, 1)
+--    print(index)
     return index[1]
 end
 
@@ -41,6 +43,10 @@ function rl_utils.play_with_cnn(b, board_history, player, net)
             recent_board[i] = board_history[#board_history + 1 - i]
         end
     end
+
+--    for j=1, 8 do
+--        board.show_fancy(recent_board[j], "all_rows_cols")
+--    end
 
     local output = resnet_util.play(net, recent_board, player)
     local probs, win_rate = output[1], output[2]
@@ -68,6 +74,7 @@ function rl_utils.play_with_cnn(b, board_history, player, net)
     end
 
     if iter >= max_iter then
+        x, y = 0, 0
         print("not find a valid move in ", max_iter, " iterations ..")
     end
 
