@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-04 09:02:27
+-- @Last Modified time: 2017-12-06 20:05:42
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -208,15 +208,17 @@ function Trainer:accuracy(outputs, labels)
     local a, z = labels[1], labels[2]
     local batch_size = (#v)[1]
 
-    topv, topi = (-p):topk(5) -- topk return the k smallest
-    if self.opt.use_gpu then
-        acc = topi:eq(a:cudaLong():view(-1, 1):expandAs(topi))
-    else
-        acc = topi:eq(a:long():view(-1, 1):expandAs(topi))
-    end
+    a = self.opt.use_gpu and a:cudaLong() or a:long()
 
-    local top1 = acc:narrow(2, 1, 1):sum() / batch_size
+    local topv, topi, acc
+
+    topv, topi = (-p):topk(5) -- topk return the first k smallest, so we need to negate
+    acc = topi:eq(a:view(-1, 1):expandAs(topi))
     local top5 = acc:narrow(2, 1, 5):sum() / batch_size
+
+    topv, topi = (-p):topk(1)
+    acc = topi:eq(a:view(-1, 1):expandAs(topi))
+    local top1 = acc:narrow(2, 1, 1):sum() / batch_size
 
     return top1, top5
 end
