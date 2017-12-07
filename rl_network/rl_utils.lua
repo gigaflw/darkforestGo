@@ -12,7 +12,7 @@ local pl = require 'pl.import_into'()
 
 local rl_utils = {}
 
-function rl_utils.sample(probs)
+function rl_utils.sample(probs, ply)
 
 --    local cum_prob = torch.cumsum(probs, 1)
 --    local needle = torch.rand(1)[1]*cum_prob[cum_prob:size()]
@@ -27,9 +27,22 @@ function rl_utils.sample(probs)
 --
 --    return index
 
---    print(probs)
-    local _, index = torch.max(probs, 1)
---    print(index)
+
+    local score, index = torch.sort(probs, 1, true)
+
+--    local res = {}
+--    for i=1, score:size(1) do
+--        local x, y = goutils.moveIdx2xy(index[i])
+--        res[i] = tostring(x) .. "\t" .. tostring(y) .. "\t" .. tostring(score[i])
+--    end
+--
+--    print(res)
+
+--    local x, y = goutils.moveIdx2xy(index[1])
+--    print(tostring(x) .. "\t" .. tostring(y) .. "\t" .. tostring(score[1]))
+
+    if index[1] == 362 then print(tostring(ply) .. "\t" .. tostring(score[1])) end
+
     return index[1]
 end
 
@@ -44,17 +57,13 @@ function rl_utils.play_with_cnn(b, board_history, player, net)
         end
     end
 
---    for j=1, 8 do
---        board.show_fancy(recent_board[j], "all_rows_cols")
---    end
-
     local output = resnet_util.play(net, recent_board, player)
     local probs, win_rate = output[1], output[2]
     local x, y
 
     local max_iter, iter = 363, 1
     while iter < max_iter do
-        local index = rl_utils.sample(probs)
+        local index = rl_utils.sample(probs, b._ply)
 
         -- pass move
         if index == 362 then

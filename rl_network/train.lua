@@ -26,7 +26,7 @@ local opt = pl.lapp[[
     --num_games            (default 1)             The number of games to be played.
     --sample_step          (default -1)             Sample at a particular step.
     --presample_codename1  (default "resnet")
-    --presample_codename2  (default "darkfores2")
+    --presample_codename2  (default "resnet")
     --presample_ft         (default "old")
     --copy_path            (default "")
     --pipe_path            (default "../../dflog")  Pipe path

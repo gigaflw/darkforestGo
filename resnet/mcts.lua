@@ -81,9 +81,6 @@ local callbacks = {
     move_receiver = function(x, y, player)
         playoutv2.prune_xy(tr, x, y, player, nil)
     end
-end
-
-end
 }
 
 local opt2 = {

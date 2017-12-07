@@ -90,6 +90,8 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
             x, y = dcnn_utils.sample(dcnn_opt, b, b._next_player)
         end
 
+--        print("!".."\t"..tostring(x).."\t"..tostring(y).. "\n")
+
         if x == nil then
             local player_str = b._next_player == common.white and 'W' or 'B'
             m[player_str] = ''
@@ -104,12 +106,16 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
 
         board.play(b, x, y, b._next_player)
 
+--        board.show(b, 'last_move')
+
         local board_copy = board.copyfrom(b)
         table.insert(board_history, board_copy)
 
         if board.is_game_end(b) then
             break
         end
+
+--        if b._ply > 10 then break end
     end
 
     local _, score, min_score, max_score = self_play.check_resign(b, opt)
