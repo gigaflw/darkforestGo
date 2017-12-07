@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-29 16:24:40
+-- @Last Modified time: 2017-12-07 22:21:52
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -56,7 +56,9 @@ local doc = [[
 
 local function create_model(opt)
     assert(opt.n_res, "ResNet: No opt.n_res assigned")
+    assert(opt.n_channel, "ResNet: No opt.n_channel assigned")
     local n_residual_blocks = opt.n_res -- 19 or 39 according to the thesis
+    local n_conv_channel = opt.n_channel -- 256 according to the thesis
 
     ---------------------------
     -- Residual Block & Tower
@@ -65,11 +67,11 @@ local function create_model(opt)
     -- The basic residual layer block for 18 and 34 layer network, and the CIFAR networks
     local function residualBlock()
         local s = nn.Sequential()
-            :add(Conv(256, 256, 3, 3, 1, 1, 1, 1))
-            :add(BatchNorm(256))
+            :add(Conv(n_conv_channel, n_conv_channel, 3, 3, 1, 1, 1, 1))
+            :add(BatchNorm(n_conv_channel))
             :add(ReLU(true))
-            :add(Conv(256, 256, 3, 3, 1, 1, 1, 1))
-            :add(BatchNorm(256))
+            :add(Conv(n_conv_channel, n_conv_channel, 3, 3, 1, 1, 1, 1))
+            :add(BatchNorm(n_conv_channel))
 
         return nn.Sequential()
         :add(nn.ConcatTable()
@@ -80,8 +82,8 @@ local function create_model(opt)
     end
 
     -- Creates count residual blocks with specified number of features
-    -- in: batch_size x 256 x 19 x 19
-    -- out: batch_size x 256 x 19 x 19, identical shape
+    -- in: batch_size x n_conv_channel x 19 x 19
+    -- out: batch_size x n_conv_channel x 19 x 19, identical shape
     local function residualTower(n_residual_blocks)
         local s = nn.Sequential()
         for i= 1, n_residual_blocks do
@@ -95,7 +97,7 @@ local function create_model(opt)
     ---------------------------
     local function policyHead()
         return nn.Sequential()
-            :add(Conv(256, 2, 1, 1, 1, 1)) -- batch_size x 2 x 19 x 19
+            :add(Conv(n_conv_channel, 2, 1, 1, 1, 1)) -- batch_size x 2 x 19 x 19
             :add(BatchNorm(2))
             :add(ReLU(true))
             :add(nn.View(19*19*2))
@@ -104,7 +106,7 @@ local function create_model(opt)
 
     local function valueHead()
         return nn.Sequential()
-            :add(Conv(256, 1, 1, 1, 1, 1)) -- batch_size x 1 x 19 x 19
+            :add(Conv(n_conv_channel, 1, 1, 1, 1, 1)) -- batch_size x 1 x 19 x 19
             :add(BatchNorm(1))
             :add(ReLU(true))
             :add(nn.View(19*19))
@@ -118,8 +120,8 @@ local function create_model(opt)
     --  The ResNet model
     ---------------------------
     local model = nn.Sequential()
-        :add(Conv(17, 256, 3, 3, 1, 1, 1, 1)) -- batch_size x 256 x 19 x 19
-        :add(BatchNorm(256))
+        :add(Conv(17, n_conv_channel, 3, 3, 1, 1, 1, 1)) -- batch_size x n_conv_channel x 19 x 19
+        :add(BatchNorm(n_conv_channel))
         :add(ReLU(true))
         :add(residualTower(n_residual_blocks))
         :add(nn.ConcatTable()
