@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-08 19:32:16
+-- @Last Modified time: 2017-12-08 21:14:46
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -57,8 +57,10 @@ local doc = [[
 local function create_model(opt)
     assert(opt.n_res, "ResNet: No opt.n_res assigned")
     assert(opt.n_channel, "ResNet: No opt.n_channel assigned")
+    assert(opt.n_feature, "ResNet: No opt.n_feature assigned")
     local n_residual_blocks = opt.n_res -- 19 or 39 according to the thesis
     local n_conv_channel = opt.n_channel -- 256 according to the thesis
+    local n_feature = opt.n_feature
 
     ---------------------------
     -- Residual Block & Tower
@@ -120,7 +122,7 @@ local function create_model(opt)
     --  The ResNet model
     ---------------------------
     local model = nn.Sequential()
-        :add(Conv(17, n_conv_channel, 3, 3, 1, 1, 1, 1)) -- batch_size x n_conv_channel x 19 x 19
+        :add(Conv(n_feature, n_conv_channel, 3, 3, 1, 1, 1, 1)) -- batch_size x n_conv_channel x 19 x 19
         :add(BatchNorm(n_conv_channel))
         :add(ReLU(true))
         :add(residualTower(n_residual_blocks))

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-11-30 13:54:00
+-- @Last Modified time: 2017-12-08 21:15:08
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -9,50 +9,7 @@ local goutils = require 'utils.goutils'
 local common = require 'common.common'
 local CBoard = require 'board.board'
 local argcheck = require 'argcheck'
-
------------------------
--- Feature & Label Extraction
------------------------
-local board_to_features = argcheck{
-    doc = [[
-        Given a 19x19 board and the current player
-        extracts 17 feature planes
-        return a 17 x 19 x 19 tensor.
-
-        Assume our stones at this time to be X_t (19 x 19), opponent's to be Y_t
-        Then the feature planes: (according to AlphaGo Zero thesis)
-        s_t = [X_t, Y_t, X_{t-1}, Y_{t-1}, ..., X_{t-7}, Y_{t-7}, C]
-        where C is all 1 if we are black, 0 if white.
-
-        Since history info is needed, we need `last_features` to passed into this function
-        changes will be both made in place and returned.
-
-        usage:
-        > a = <some_tensor>
-        > new_a = board_to_features(..., a)
-        > new_a = a -- true
-    ]],
-    {name='board', type='cdata', help='A `board.board` instance'},
-    {name='player', type='number', help='Current player, one of common.black ( = 1 ) or common.white ( = 2 )'},
-    {name='last_features', type='torch.FloatTensor',
-        help='Feature from last iteration since history info is needed'},
-    call = function (board, player, last_features)
-        ret = last_features or torch.FloatTensor(17, 19, 19):zero()
-
-        for i = 16, 4, -2 do
-            ret[i] = ret[i-3]
-            ret[i-1] = ret[i-2]
-        end
-
-        ret[1] = CBoard.get_stones(board, player)
-        ret[2] = CBoard.get_stones(board, CBoard.opponent(player))
-
-        ret:narrow(1, 17, 1):fill(player == common.black and 1 or 0)
-
-        return ret
-    end
-}
-
+local resnet_util = require 'resnet.util'
 
 local put_and_parse = argcheck{
     doc = [[
@@ -60,7 +17,7 @@ local put_and_parse = argcheck{
         get the input features and corresponding labels of a single play in a game,
         which position is parsed depends on `game.ply` attribute
         return: {
-            s: the 17 x 19 x 19 feature tensor, input of the network
+            s: the 12 x 19 x 19 feature tensor, input of the network
             a: an integer in [1, 19*19+1], denoting human experts' move, the extra '+1' means pass.
               Should it be a pass, a = 19*19+1
             z: 1 if the current player wins, -1 otherwise
@@ -69,10 +26,9 @@ local put_and_parse = argcheck{
     ]],
     {name='board', type='cdata', help='A `board.board` instance'},
     {name='game', type='sgfloader', help='A `sgfloader` instance, get by calling `sgf.parse()'},
-    {name='last_features', type='torch.FloatTensor',
-        help='Feature from last iteration since history info is needed'},
+    -- {name='last_features', type='torch.FloatTensor', help='Feature from last iteration since history info is needed'},
     {name='augment', type='number', opt=true, help='[0, 7], the rotation style used for data augmentation, nil to disable'},
-    call = function (board, game, last_features, augment)
+    call = function (board, game, augment)
         local x, y, player = sgf.parse_move(game.sgf[game.ply])
         local is_pass = x == 0 and y == 0
 
@@ -83,7 +39,7 @@ local put_and_parse = argcheck{
         assert(moveIdx > 0 and moveIdx <= 19 * 19 + 1)
 
         return {
-          s = board_to_features(board, player, last_features),
+          s = resnet_util.board_to_features(board, player),
           a = moveIdx,
           z = game:get_result_enum() == player and 1 or -1, -- FIXME: what if a tie?
         }
@@ -128,10 +84,10 @@ get_dataloader = argcheck{
         local board = CBoard.new()
 
         -- reusing tensors to save memory
-        local s = torch.FloatTensor(batch_size, 17, 19, 19)
+        local s = torch.FloatTensor(batch_size, opt.n_feature, 19, 19)
         local a = torch.FloatTensor(batch_size)
         local z = torch.FloatTensor(batch_size)
-        local last_features = torch.FloatTensor(17, 19, 19)
+        local last_features = torch.FloatTensor(opt.n_feature, 19, 19)
         local augment = nil -- augment style should be consistent during a single game
 
         -----------------------
@@ -169,7 +125,8 @@ get_dataloader = argcheck{
             game.ply = game.ply + 1
 
             -- this function should also put the augmented stone onto the board
-            return put_and_parse(board, game, last_features, augment)
+            -- return put_and_parse(board, game, last_features, augment)
+            return put_and_parse(board, game, augment)
         end
 
         local function _iter_batch(max_batches, ind)

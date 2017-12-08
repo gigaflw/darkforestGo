@@ -704,13 +704,13 @@ void FindAllCandidateMoves(const Board* board, Stone player, int self_atari_thre
       // Never fill a true eye.
       if (IsTrueEye(board, c, player)) continue;
 
-      // Be careful about self-atari moves.
-      if (IsSelfAtari(board, &ids, c, player, &self_atari_count)) {
-        // For self-atari's with fewer counts, we could tolorate since they are usually important in killing others' group.
-        if (self_atari_count >= self_atari_thres) continue;
-      }
+      // // Be careful about self-atari moves.
+      // if (IsSelfAtari(board, &ids, c, player, &self_atari_count)) {
+      //   // For self-atari's with fewer counts, we could tolorate since they are usually important in killing others' group.
+      //   if (self_atari_count >= self_atari_thres) continue;
+      // }
 
-      all_moves->moves[all_moves->num_moves++] = c;
+      all_moves->moves[all_moves->num_moves++] = EXPORT_OFFSET(c);
     }
   }
 }

@@ -21,3 +21,4 @@ cmake-build-debug/
 
 # checkpoints
 resnet.ckpt/
+resnet/show.lua

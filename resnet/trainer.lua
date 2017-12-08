@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-08 19:36:32
+-- @Last Modified time: 2017-12-08 20:30:10
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -168,7 +168,7 @@ function Trainer:train()
 
     if math.fmod(opt.epochs, opt.epoch_per_ckpt) ~= 0 then
         self.net:clearState()
-        self:save(string.format('e%04d.params', opt.epochs))
+        self:save(e, string.format('e%04d.params', opt.epochs))
     end
     self:log("Training ends")
 end

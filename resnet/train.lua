@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-07 22:19:37
+-- @Last Modified time: 2017-12-08 21:18:52
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -13,7 +13,7 @@ local opt = pl.lapp[[
     --log_file           (default '')       If given, log will be saved
 
     ** Dataset Options  **
-    --batch_size         (default 24)       The number of positions in each batch, 2048 in AlphaGo Zero thesis
+    --batch_size         (default 24)      The number of positions in each batch, 2048 in AlphaGo Zero thesis
     --data_augment                          use rotation/reflection to augment dataset
     --verbose                               Whether print data loading detailsv
 
@@ -34,6 +34,7 @@ local opt = pl.lapp[[
     ** Network Options  **
     --n_res              (default 2)        The number of residual blocks in the resnet, 19 or 39 according to the thesis
     --n_channel          (default 64)       The number of channels in each residual block, 256 in the thesis
+    --n_feature          (default 12)       The number of feature planes, this should be in accordence with feature extraction function in util.lua
 
     ** Optimizer Options  **
     --lr                (default 0.1)       learning rate
