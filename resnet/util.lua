@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-08 16:46:55
+-- @Last Modified time: 2017-12-08 18:01:18
 
 local utils = require("utils.utils")
 
@@ -58,19 +58,23 @@ function demo()
     out = play(net, board_history, common.black)
 end
 
-function util.print_grad(net)
+function util.print_grad(net, file)
     local need_print = { SpatialConvolution='conv', SpatialBatchNormalization='bn', }
     
-    local _print
-    _print = function(layer)
+    local _print = function(message)
+        if file then file:write(message) else print(message) end
+    end
+
+    local _print_grad
+    _print_grad = function(layer)
         local name = layer.__typename:sub(layer.__typename:find('%.') + 1)
 
         if name == 'Sequential' or name == 'ConcatTable' then
-            for i, m in pairs(layer.modules) do _print(m) end
+            for i, m in pairs(layer.modules) do _print_grad(m) end
         elseif need_print[name] then
-            print(string.format(
-                "\t%s: %.5f %.5f %.5f",
-                need_print[name], layer.gradInput:max(), layer.gradInput:min(), layer.gradInput:mean()
+            _print(string.format(
+                "\t%s: %.10f %.10f",
+                need_print[name], layer.gradInput:std(), layer.gradInput:mean()
             ))
         end
     end
@@ -79,11 +83,11 @@ function util.print_grad(net)
 
     for i = 1, n-2 do _print(net.modules[i]) end
     print('residual tower: ')
-    _print(net.modules[n-1])
+    _print_grad(net.modules[n-1])
     print('policy head: ')
-    _print(net.modules[n].modules[1])
+    _print_grad(net.modules[n].modules[1])
     print('value head: ')
-    _print(net.modules[n].modules[2])
+    _print_grad(net.modules[n].modules[2])
 end
 
 return util

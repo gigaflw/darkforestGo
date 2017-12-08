@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-08 16:48:37
+-- @Last Modified time: 2017-12-08 19:36:32
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -125,10 +125,24 @@ function Trainer:train()
             ----------------------------
             local update_time = timer:time().real
             local top1, top5 = self:accuracy(self.net.output, labels)
+            local loss, policy_loss, value_loss = self.crit.output, self.crit.criterions[1].output, self.crit.criterions[2].output
+            function _get_grad()
+                local g_conv, g_bn = .0, .0
+                for _, m in pairs(self.net:findModules('nn.SpatialConvolution')) do
+                    g_conv = math.max(g_conv, m.gradInput:max())
+                end
+                for _, m in pairs(self.net:findModules('nn.SpatialBatchNormalization')) do
+                    g_bn = math.max(g_bn, m.gradInput:max())
+                end
+                return g_conv, g_bn
+            end
+            local conv_grad, bn_grad = _get_grad()
 
+            -- time used for reading data: data_time
+            -- time used for updating network: update_time - data_time
             self:log(string.format(
-                "| Epoch %d [%02d/%02d], data time: %.3fs, time: %.3fs, loss: %4f, top1 acc: %.5f%%, top5 acc: %.5f%%",
-                e, ind, opt.max_batches, data_time, update_time - data_time, self.crit.output, top1 * 100, top5 * 100
+                "| Epoch %d [%02d/%02d], loss: %.4f/%.4f, acc: %.3f%%/%.3f%%, grad: %.4f/%.4f",
+                e, ind, opt.max_batches, policy_loss, value_loss, top1 * 100, top5 * 100, conv_grad * 100, bn_grad * 100
             ))
             timer:reset()
         end

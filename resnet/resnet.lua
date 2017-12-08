@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-07 22:21:52
+-- @Last Modified time: 2017-12-08 19:32:16
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -132,13 +132,11 @@ local function create_model(opt)
     --  Init parameters
     -- according to fb.resnet.torch
     ---------------------------
-    for _, pre in pairs{'nn', 'cudnn'} do
-        for _, m in pairs(model:findModules(pre..'.SpatialConvolution')) do
-            m:init('weight', nninit.xavier):init('bias', nninit.constant, 0)
-        end
-        for _, m in pairs(model:findModules(pre..'.SpatialBatchNormalization')) do
-            m:init('weight', nninit.constant, 1):init('bias', nninit.constant, 0)
-        end
+    for _, m in pairs(model:findModules('nn.SpatialConvolution')) do
+        m:init('weight', nninit.xavier):init('bias', nninit.constant, 0)
+    end
+    for _, m in pairs(model:findModules('nn.SpatialBatchNormalization')) do
+        m:init('weight', nninit.constant, 1):init('bias', nninit.constant, 0)
     end
 
     if opt.use_gpu then
