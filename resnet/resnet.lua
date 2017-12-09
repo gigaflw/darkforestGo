@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-09 14:36:12
+-- @Last Modified time: 2017-12-09 16:26:24
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -165,7 +165,7 @@ local function create_criterion(opt)
     --  loss = c:forward(pred, label)
     crit = nn.ParallelCriterion()
         :add(nn.CrossEntropyCriterion())
-        :add(nn.MSECriterion())
+        :add(nn.MSECriterion(), opt.value_weight)
 
     if opt.use_gpu then
         require 'cunn'
