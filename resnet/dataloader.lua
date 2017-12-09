@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-08 21:15:08
+-- @Last Modified time: 2017-12-09 16:25:19
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -134,12 +134,19 @@ get_dataloader = argcheck{
             if ind > max_batches then return nil end
 
             s:zero(); a:zero(); z:zero()
+            local shuffle = {}
+            
+            for i = 1, batch_size do shuffle[i] = i end
+            for i = 1, batch_size do
+                j = math.random(i, batch_size)
+                shuffle[i], shuffle[j] = shuffle[j], shuffle[i]
+            end
 
             for i = 1, batch_size do
                 local data = _parse_next_position()
-                s[i] = data.s
-                a[i] = data.a
-                z[i] = data.z
+                s[shuffle[i]] = data.s
+                a[shuffle[i]] = data.a
+                z[shuffle[i]] = data.z
             end
 
             return ind, s, {a = a, z = z}
