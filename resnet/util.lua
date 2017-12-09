@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-08 21:12:00
+-- @Last Modified time: 2017-12-09 17:57:44
 
 local pl = require 'pl.import_into'()
 
@@ -175,15 +175,15 @@ function util.play(model, board_history, player)
             end
             out = play(net, board_history, common.black)
     ]]
-    local input = torch.CudaTensor(1, 17, 19, 19):zero()
+    -- local input = torch.CudaTensor(1, 17, 19, 19):zero()
+    -- for i = 1, 8 do
+    --     input[1][2*i-1] = CBoard.get_stones(board_history[i], player)
+    --     input[1][2*i] = CBoard.get_stones(board_history[i], CBoard.opponent(player))
+    -- end
+    -- input:narrow(2, 17, 1):fill(player == common.black and 1 or 0)
+    local input = util.board_to_features(board_history[1], player)
 
-    for i = 1, 8 do
-        input[1][2*i-1] = CBoard.get_stones(board_history[i], player)
-        input[1][2*i] = CBoard.get_stones(board_history[i], CBoard.opponent(player))
-    end
-
-    input:narrow(2, 17, 1):fill(player == common.black and 1 or 0)
-    output = model:forward(input)
+    output = model:forward(input:resize(1, table.unpack((#input):totable())):cuda())
     output[1] = nn.SoftMax():forward(output[1]:double())
     return output
 end
