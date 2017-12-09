@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-08 21:14:46
+-- @Last Modified time: 2017-12-09 14:36:12
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -9,7 +9,7 @@ local nninit = require 'nninit'
 torch.setdefaulttensortype('torch.FloatTensor')
 
 local Conv = nn.SpatialConvolution
-local ReLU = nn.ReLU
+local Acti -- to de decided by opt
 local Linear = nn.Linear
 local BatchNorm = nn.SpatialBatchNormalization
 
@@ -55,12 +55,19 @@ local doc = [[
 ]]
 
 local function create_model(opt)
-    assert(opt.n_res, "ResNet: No opt.n_res assigned")
-    assert(opt.n_channel, "ResNet: No opt.n_channel assigned")
-    assert(opt.n_feature, "ResNet: No opt.n_feature assigned")
+    for _, name in pairs{'n_res', 'n_channel', 'n_feature', 'activation'} do
+        assert(opt[name], "ResNet: No opt."..name.." assigned")
+    end
+    assert(nn[opt.activation], 'unknown activation '..opt.activation)
     local n_residual_blocks = opt.n_res -- 19 or 39 according to the thesis
     local n_conv_channel = opt.n_channel -- 256 according to the thesis
     local n_feature = opt.n_feature
+    if opt.acti_param then
+        Acti = function () return nn[opt.activation](opt.acti_param, true) end
+        -- true means values will be calculated in place
+    else
+        Acti = function () return nn[opt.activation](true) end
+    end
 
     ---------------------------
     -- Residual Block & Tower
@@ -71,7 +78,7 @@ local function create_model(opt)
         local s = nn.Sequential()
             :add(Conv(n_conv_channel, n_conv_channel, 3, 3, 1, 1, 1, 1))
             :add(BatchNorm(n_conv_channel))
-            :add(ReLU(true))
+            :add(Acti())
             :add(Conv(n_conv_channel, n_conv_channel, 3, 3, 1, 1, 1, 1))
             :add(BatchNorm(n_conv_channel))
 
@@ -80,7 +87,7 @@ local function create_model(opt)
             :add(s)
             :add(nn.Identity()))
         :add(nn.CAddTable(true))
-        :add(ReLU(true))
+        :add(Acti())
     end
 
     -- Creates count residual blocks with specified number of features
@@ -101,7 +108,7 @@ local function create_model(opt)
         return nn.Sequential()
             :add(Conv(n_conv_channel, 2, 1, 1, 1, 1)) -- batch_size x 2 x 19 x 19
             :add(BatchNorm(2))
-            :add(ReLU(true))
+            :add(Acti())
             :add(nn.View(19*19*2))
             :add(Linear(19*19*2, 19*19+1))
     end
@@ -110,10 +117,10 @@ local function create_model(opt)
         return nn.Sequential()
             :add(Conv(n_conv_channel, 1, 1, 1, 1, 1)) -- batch_size x 1 x 19 x 19
             :add(BatchNorm(1))
-            :add(ReLU(true))
+            :add(Acti())
             :add(nn.View(19*19))
             :add(Linear(19*19, 256))
-            :add(ReLU(true))
+            :add(Acti())
             :add(Linear(256, 1))
             :add(nn.Tanh())
     end
@@ -124,7 +131,7 @@ local function create_model(opt)
     local model = nn.Sequential()
         :add(Conv(n_feature, n_conv_channel, 3, 3, 1, 1, 1, 1)) -- batch_size x n_conv_channel x 19 x 19
         :add(BatchNorm(n_conv_channel))
-        :add(ReLU(true))
+        :add(Acti())
         :add(residualTower(n_residual_blocks))
         :add(nn.ConcatTable()
             :add(policyHead())
