@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-09 16:25:19
+-- @Last Modified time: 2017-12-10 16:40:29
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -38,10 +38,11 @@ local put_and_parse = argcheck{
         local moveIdx = is_pass and 19*19+1 or goutils.xy2moveIdx(x, y)
         assert(moveIdx > 0 and moveIdx <= 19 * 19 + 1)
 
+        local winner = game:get_result_enum()
         return {
           s = resnet_util.board_to_features(board, player),
           a = moveIdx,
-          z = game:get_result_enum() == player and 1 or -1, -- FIXME: what if a tie?
+          z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
         }
     end
 }
