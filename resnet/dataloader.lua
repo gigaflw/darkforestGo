@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-10 16:40:29
+-- @Last Modified time: 2017-12-10 17:04:12
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -39,11 +39,13 @@ local put_and_parse = argcheck{
         assert(moveIdx > 0 and moveIdx <= 19 * 19 + 1)
 
         local winner = game:get_result_enum()
-        return {
-          s = resnet_util.board_to_features(board, player),
-          a = moveIdx,
-          z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
-        }
+        local s = resnet_util.board_to_features(board, player)
+        local a = moveIdx
+        local z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
+
+        return function()
+            return { s = s, a = a, z = z }
+        end
     end
 }
 -----------------------
@@ -71,8 +73,10 @@ get_dataloader = argcheck{
     call = function (partition, opt)
         batch_size = opt.batch_size
         use_augment = opt.data_augment
+        pool_size = opt.data_pool_size
         assert(batch_size ~= nil, "No 'batch_size' found in opt")
         assert(use_augment ~= nil, "No 'data_augment' found in opt")
+        assert(pool_size ~= nil, "No 'pool_size' found in opt")
 
         math.randomseed(os.time())
 
@@ -84,10 +88,6 @@ get_dataloader = argcheck{
         local game_idx = 0
         local board = CBoard.new()
 
-        -- reusing tensors to save memory
-        local s = torch.FloatTensor(batch_size, opt.n_feature, 19, 19)
-        local a = torch.FloatTensor(batch_size)
-        local z = torch.FloatTensor(batch_size)
         local last_features = torch.FloatTensor(opt.n_feature, 19, 19)
         local augment = nil -- augment style should be consistent during a single game
 
@@ -130,6 +130,23 @@ get_dataloader = argcheck{
             return put_and_parse(board, game, augment)
         end
 
+        local data_pool = {}
+        local function _get_data_from_pool()
+            if #data_pool == 0 then
+                for i = 1, pool_size do data_pool[i] = _parse_next_position() end
+            end
+
+            local choice = math.random(1, pool_size)
+            local ret = data_pool[choice]()
+            data_pool[choice] = _parse_next_position()
+            return ret
+        end
+
+        -- reusing tensors to save memory
+        local s = torch.FloatTensor(batch_size, opt.n_feature, 19, 19)
+        local a = torch.FloatTensor(batch_size)
+        local z = torch.FloatTensor(batch_size)
+
         local function _iter_batch(max_batches, ind)
             ind = ind + 1
             if ind > max_batches then return nil end
@@ -144,7 +161,7 @@ get_dataloader = argcheck{
             end
 
             for i = 1, batch_size do
-                local data = _parse_next_position()
+                local data = _get_data_from_pool()
                 s[shuffle[i]] = data.s
                 a[shuffle[i]] = data.a
                 z[shuffle[i]] = data.z

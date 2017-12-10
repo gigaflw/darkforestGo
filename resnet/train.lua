@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-09 16:26:15
+-- @Last Modified time: 2017-12-10 17:03:42
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -13,9 +13,10 @@ local opt = pl.lapp[[
     --log_file           (default '')       If given, log will be saved
 
     ** Dataset Options  **
-    --batch_size         (default 24)      The number of positions in each batch, 2048 in AlphaGo Zero thesis
+    --batch_size         (default 24)       The number of positions in each batch, 2048 in AlphaGo Zero thesis
     --data_augment                          use rotation/reflection to augment dataset
     --verbose                               Whether print data loading detailsv
+    --data_pool_size     (default 240)      Use a pool to buffer and shuffle the inputs better
 
     ** Training Options  **
     --max_batches        (default 20)       The number of batches in each epoch (commonly 1 epoch means to go through all data, however here it is too large)
@@ -37,7 +38,7 @@ local opt = pl.lapp[[
     --n_feature          (default 12)       The number of feature planes, this should be in accordence with feature extraction function in util.lua
     --activation         (default 'ELU')    The type of activation function, 'ReLu' | 'ELU'
     --acti_param         (default 0.1)      Activation parameter, incase activation other than ReLU is used
-    --value_weight       (default 0.1)      Loss = Policy Loss + weight * Value Loss
+    --value_weight       (default 1.0)      Loss = Policy Loss + weight * Value Loss
 
     ** Optimizer Options  **
     --lr                (default 0.1)       learning rate
