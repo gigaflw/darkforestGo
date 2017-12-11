@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-10 17:04:12
+-- @Last Modified time: 2017-12-11 10:06:33
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -71,12 +71,12 @@ get_dataloader = argcheck{
     {name = 'partition', type='string', help='"test" or "train"'},
     {name = 'opt', type='table'},
     call = function (partition, opt)
+        for _, name in pairs{'batch_size', 'data_augment', 'data_pool_size'} do
+            assert(opt[name] ~= nil, "No '"..name.."' found in opt")
+        end
         batch_size = opt.batch_size
-        use_augment = opt.data_augment
-        pool_size = opt.data_pool_size
-        assert(batch_size ~= nil, "No 'batch_size' found in opt")
-        assert(use_augment ~= nil, "No 'data_augment' found in opt")
-        assert(pool_size ~= nil, "No 'pool_size' found in opt")
+        use_augment = not opt.debug and opt.data_augment
+        pool_size = opt.debug and -1 or opt.data_pool_size
 
         math.randomseed(os.time())
 
@@ -91,6 +91,7 @@ get_dataloader = argcheck{
         local last_features = torch.FloatTensor(opt.n_feature, 19, 19)
         local augment = nil -- augment style should be consistent during a single game
 
+        if opt.debug then print("Dataloader in debug mode!") end
         -----------------------
         -- loading games
         -----------------------
@@ -120,8 +121,9 @@ get_dataloader = argcheck{
         -- iterator interface
         -----------------------
         local function _parse_next_position()
+            local load = opt.debug and load_next_game or load_random_game 
             if game == nil or game.ply - 1 >= game:num_round() then
-                repeat load_random_game() until game:num_round() > 0
+                repeat load() until game:num_round() > 0
             end
             game.ply = game.ply + 1
 
@@ -132,6 +134,8 @@ get_dataloader = argcheck{
 
         local data_pool = {}
         local function _get_data_from_pool()
+            if pool_size == -1 then return _parse_next_position()() end
+
             if #data_pool == 0 then
                 for i = 1, pool_size do data_pool[i] = _parse_next_position() end
             end
@@ -146,18 +150,20 @@ get_dataloader = argcheck{
         local s = torch.FloatTensor(batch_size, opt.n_feature, 19, 19)
         local a = torch.FloatTensor(batch_size)
         local z = torch.FloatTensor(batch_size)
+        local shuffle = {}
+        for i = 1, batch_size do shuffle[i] = i end
 
         local function _iter_batch(max_batches, ind)
             ind = ind + 1
             if ind > max_batches then return nil end
 
             s:zero(); a:zero(); z:zero()
-            local shuffle = {}
-            
-            for i = 1, batch_size do shuffle[i] = i end
-            for i = 1, batch_size do
-                j = math.random(i, batch_size)
-                shuffle[i], shuffle[j] = shuffle[j], shuffle[i]
+
+            if not opt.debug then
+                for i = 1, batch_size do
+                    j = math.random(i, batch_size)
+                    shuffle[i], shuffle[j] = shuffle[j], shuffle[i]
+                end
             end
 
             for i = 1, batch_size do

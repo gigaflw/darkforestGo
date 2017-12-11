@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-10 17:03:42
+-- @Last Modified time: 2017-12-11 09:58:36
 
 doc = [[
     The following script should always be the entrance of the training procedure
@@ -17,6 +17,7 @@ local opt = pl.lapp[[
     --data_augment                          use rotation/reflection to augment dataset
     --verbose                               Whether print data loading detailsv
     --data_pool_size     (default 240)      Use a pool to buffer and shuffle the inputs better
+    --debug                                 If given, no shuffling or augmentation will be performed
 
     ** Training Options  **
     --max_batches        (default 20)       The number of batches in each epoch (commonly 1 epoch means to go through all data, however here it is too large)
