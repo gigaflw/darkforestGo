@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-09 17:57:44
+-- @Last Modified time: 2017-12-11 10:36:38
 
 local pl = require 'pl.import_into'()
 
@@ -80,8 +80,8 @@ util.board_to_features = argcheck{
         F[9] = o_liberties:ge(3)
 
         local curr_ply = CBoard.get_ply(board)
-        p_history:add(-curr_ply):exp()
-        o_history:add(-curr_ply):exp()
+        p_history:add(-curr_ply):exp():cmul(p_stones)
+        o_history:add(-curr_ply):exp():cmul(o_stones)
 
         F[10] = p_history
         F[11] = o_history

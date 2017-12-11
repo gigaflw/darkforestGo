@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-11 10:06:33
+-- @Last Modified time: 2017-12-11 10:33:01
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -11,7 +11,7 @@ local CBoard = require 'board.board'
 local argcheck = require 'argcheck'
 local resnet_util = require 'resnet.util'
 
-local put_and_parse = argcheck{
+local parse_and_put = argcheck{
     doc = [[
         put the augmented (rotated) stone onto the board,
         get the input features and corresponding labels of a single play in a game,
@@ -34,7 +34,6 @@ local put_and_parse = argcheck{
 
         if augment ~= nil then x, y = goutils.rotateMove(x, y, augment) end
 
-        if not is_pass then CBoard.play(board, x, y, player) end
         local moveIdx = is_pass and 19*19+1 or goutils.xy2moveIdx(x, y)
         assert(moveIdx > 0 and moveIdx <= 19 * 19 + 1)
 
@@ -42,6 +41,8 @@ local put_and_parse = argcheck{
         local s = resnet_util.board_to_features(board, player)
         local a = moveIdx
         local z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
+
+        if not is_pass then CBoard.play(board, x, y, player) end
 
         return function()
             return { s = s, a = a, z = z }
@@ -66,7 +67,7 @@ get_dataloader = argcheck{
         > end
         where input is shaped batch_size x feature_planes x 19 x 19,
         label = { a = <a batch_size-d vector>, z = <a batch_size-d vector> }
-        refer to `put_and_parse` for meanings of features, `a` and `z`
+        refer to `parse_and_put` for meanings of features, `a` and `z`
     ]],
     {name = 'partition', type='string', help='"test" or "train"'},
     {name = 'opt', type='table'},
@@ -128,8 +129,8 @@ get_dataloader = argcheck{
             game.ply = game.ply + 1
 
             -- this function should also put the augmented stone onto the board
-            -- return put_and_parse(board, game, last_features, augment)
-            return put_and_parse(board, game, augment)
+            -- return parse_and_put(board, game, last_features, augment)
+            return parse_and_put(board, game, augment)
         end
 
         local data_pool = {}
