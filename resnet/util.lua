@@ -144,7 +144,7 @@ local _old_board_to_features = argcheck{
 -----------------------
 -- Play with Model API
 -----------------------
-function util.play(model, board_history, player)
+function util.play(model, board, player)
     doc = [[
         @param: model:
             a network given by `resnet.resnet.create_model' or `torch.load(<ckpt>)`
@@ -181,9 +181,9 @@ function util.play(model, board_history, player)
     --     input[1][2*i] = CBoard.get_stones(board_history[i], CBoard.opponent(player))
     -- end
     -- input:narrow(2, 17, 1):fill(player == common.black and 1 or 0)
-    local input = util.board_to_features(board_history[1], player)
+    local input = util.board_to_features(board, player)
 
-    output = model:forward(input:resize(1, table.unpack((#input):totable())):cuda())
+    local output = model:forward(input:resize(1, table.unpack((#input):totable())):cuda())
     output[1] = nn.SoftMax():forward(output[1]:double())
     return output
 end

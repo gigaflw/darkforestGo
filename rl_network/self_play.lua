@@ -17,12 +17,10 @@ local dcnn_utils = require("board.dcnn_utils")
 local sgf = require("utils.sgf")
 local common = require("common.common")
 local rl_utils = require("rl_network.rl_utils")
-local model = torch.load("../resnet.ckpt/second/e1600.params")
 local pl = require 'pl.import_into'()
 
 local def_policy = dp.new()
 local ownermap = om.new()
-local net = model.net
 
 local self_play = {}
 
@@ -57,7 +55,6 @@ end
 function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
     -- One game of self play.
     local moves = {}
-    local board_history = {}
 
     while true do
 
@@ -84,8 +81,8 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
         -- Generate move
         local dcnn_opt = b._next_player == common.black and dcnn_opt1 or dcnn_opt2
         local x, y
-        if dcnn_opt.codename == "resnet" then
-            x, y = rl_utils.play_with_cnn(b, board_history, b._next_player, net)
+        if string.sub(dcnn_opt.codename, 1, 6) == "resnet" then
+            x, y = rl_utils.play_with_cnn(b, b._next_player, dcnn_opt.model.net)
         else
             x, y = dcnn_utils.sample(dcnn_opt, b, b._next_player)
         end
@@ -107,9 +104,6 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
         board.play(b, x, y, b._next_player)
 
 --        board.show(b, 'last_move')
-
-        local board_copy = board.copyfrom(b)
-        table.insert(board_history, board_copy)
 
         if board.is_game_end(b) then
             break

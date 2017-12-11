@@ -49,8 +49,12 @@ common.codenames = {
         model_name = paths.concat(script_path, "../models/df2_cpu.bin"), 
         feature_type = 'extended'
     },
-    resnet = {
-        model_name = paths.concat(script_path, "../resnet.ckpt/latest.params"),
+    resnet_14 = {
+        model_name = paths.concat(script_path, "../resnet.ckpt/14/latest.params"),
+        feature_type = 'custom'
+    },
+    resnet_15 = {
+        model_name = paths.concat(script_path, "../resnet.ckpt/15/latest.params"),
         feature_type = 'custom'
     },
 }

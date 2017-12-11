@@ -11,8 +11,8 @@ local board = require("board.board")
 local pl = require 'pl.import_into'()
 
 local opt = pl.lapp[[
-    --codename1            (default "resnet")       Code name AI1 for models. If this is not empty then --input will be omitted.
-    --codename2            (default "darkfores2")       Code name AI2 for models.
+    --codename1            (default "resnet_15")       Code name AI1 for models. If this is not empty then --input will be omitted.
+    --codename2            (default "resnet_14")       Code name AI2 for models.
     -f,--feature_type      (default "old")          By default we only rl_network old features. If codename is specified, this is omitted.
     -r,--rank              (default "9d")           We play in the level of rank.
     --sample_step          (default 1)              Sample step, if the step of a game is smaller, it is a bad sample.
@@ -25,8 +25,8 @@ local opt = pl.lapp[[
     --debug                                         Wehther we use debug mode
     --num_games            (default 1)             The number of games to be played.
     --sample_step          (default -1)             Sample at a particular step.
-    --presample_codename1  (default "resnet")
-    --presample_codename2  (default "resnet")
+    --presample_codename1  (default "resnet_15")
+    --presample_codename2  (default "resnet_14")
     --presample_ft         (default "old")
     --copy_path            (default "")
     --pipe_path            (default "../../dflog")  Pipe path

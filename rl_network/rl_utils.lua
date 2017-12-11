@@ -27,7 +27,6 @@ function rl_utils.sample(probs, ply)
 --
 --    return index
 
-
     local score, index = torch.sort(probs, 1, true)
 
 --    local res = {}
@@ -41,29 +40,21 @@ function rl_utils.sample(probs, ply)
 --    local x, y = goutils.moveIdx2xy(index[1])
 --    print(tostring(x) .. "\t" .. tostring(y) .. "\t" .. tostring(score[1]))
 
-    if index[1] == 362 then print(tostring(ply) .. "\t" .. tostring(score[1])) end
+
+--    if index[1] == 362 then print(tostring(ply) .. "\t" .. tostring(score[1])) end
 
     return index[1]
 end
 
-function rl_utils.play_with_cnn(b, board_history, player, net)
-    local recent_board = {}
+function rl_utils.play_with_cnn(b, player, net)
 
-    for i = 1, 8 do
-        if i > #board_history then
-            recent_board[i] = board.new()
-        else
-            recent_board[i] = board_history[#board_history + 1 - i]
-        end
-    end
-
-    local output = resnet_util.play(net, recent_board, player)
+    local output = resnet_util.play(net, b, player)
     local probs, win_rate = output[1], output[2]
-    local x, y
+    local x, y, index
 
     local max_iter, iter = 363, 1
     while iter < max_iter do
-        local index = rl_utils.sample(probs, b._ply)
+        index = rl_utils.sample(probs, b._ply)
 
         -- pass move
         if index == 362 then
@@ -86,6 +77,8 @@ function rl_utils.play_with_cnn(b, board_history, player, net)
         x, y = 0, 0
         print("not find a valid move in ", max_iter, " iterations ..")
     end
+
+    print(tostring(b._ply) .. "\t" .. tostring(index) .. "\t" .. tostring(probs[index]))
 
     return x, y, win_rate
 end
