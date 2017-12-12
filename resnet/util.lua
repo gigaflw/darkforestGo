@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-11 10:36:38
+-- @Last Modified time: 2017-12-12 10:39:05
 
 local pl = require 'pl.import_into'()
 
@@ -148,14 +148,8 @@ function util.play(model, board, player)
     doc = [[
         @param: model:
             a network given by `resnet.resnet.create_model' or `torch.load(<ckpt>)`
-        @param: board_with_history:
-            an array like this: 
-                [B_t, B_{t-1}, ..., B_{t-7}]
-            
-            where, B_t is a `board.board` instance of the current position,
-            B_{t-i} is the history position `i` step ahead,
-            i.e. after any of the players playing a stone on B_{t-1}, it becomes B_t.
-            if there is no such previous position, make it all zero
+        @param: board:
+            a `board.board` instance, will not modify the board
         @param: player:
             `common.black` or `common.white`
         @return: a table like this:
@@ -168,12 +162,9 @@ function util.play(model, board, player)
             local net = torch.load('./resnet.ckpt/latest.params')
 
             net = net.net
-            board_history = {}
-            for i = 1, 8 do
-                board_history[i] = CBoard.new()
-                CBoard.play(board_history[i], math.random(19), math.random(19), math.random(2) == 1 and common.black or common.white)
-            end
-            out = play(net, board_history, common.black)
+            board = CBoard.new()
+            ... -- do some plays
+            out = play(net, board, common.black)
     ]]
     -- local input = torch.CudaTensor(1, 17, 19, 19):zero()
     -- for i = 1, 8 do
