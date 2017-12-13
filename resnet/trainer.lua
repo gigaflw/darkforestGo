@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-08 20:30:10
+-- @Last Modified time: 2017-12-13 16:41:27
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -30,7 +30,7 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
             the criterion used to calculate loss
         @param: opt:
             the options for everything, once set, cannot be modified
-        @param: dataloader:
+        @param: train_dataloader:
             a dataloader from `resnet.dataloader`, with which one can
             for ind, inputs, labels in dataloader.iter(opt.max_batches) do
                 -- inputs: a tensor in the shape of batch_size x feature_plane x 19 x 19
@@ -38,6 +38,8 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
                 -- labels.z: a batch_size-d 0-1 vector indicating win or lose
             end
             all float tensors
+        @param: test_dataloader:
+            like `train_dataloader`, except that this is optional
     ]]
     
     self._epoch = 1
@@ -87,7 +89,6 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
 end
 
 function Trainer:train()
-    -- not shuffle yet
     opt = self.opt
 
     local function _eval()
@@ -174,7 +175,11 @@ function Trainer:train()
 end
 
 function Trainer:test()
-    -- not shuffle yet
+    if self.test_dataloader == nil then
+        self:log("** No test dataloader given. Can't carry out test.")
+        return
+    end
+
     opt = self.opt
 
     local function _eval()

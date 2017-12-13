@@ -1,9 +1,9 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-11 09:58:36
+-- @Last Modified time: 2017-12-12 11:00:15
 
-doc = [[
+local doc = [[
     The following script should always be the entrance of the training procedure
 ]]
 

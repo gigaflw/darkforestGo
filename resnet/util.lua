@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-12 10:39:05
+-- @Last Modified time: 2017-12-13 16:42:52
 
 local pl = require 'pl.import_into'()
 
@@ -142,12 +142,14 @@ local _old_board_to_features = argcheck{
 }
 
 -----------------------
--- Play with Model API
+-- API
 -----------------------
 function util.play(model, board, player)
-    doc = [[
+    local doc = [[
+        Given model and board, let the model generate a play
+
         @param: model:
-            a network given by `resnet.resnet.create_model' or `torch.load(<ckpt>)`
+            a network given by `resnet.resnet.create_model' or `torch.load(<ckpt>).net`
         @param: board:
             a `board.board` instance, will not modify the board
         @param: player:
@@ -174,11 +176,11 @@ function util.play(model, board, player)
     -- input:narrow(2, 17, 1):fill(player == common.black and 1 or 0)
     local input = util.board_to_features(board, player)
 
+    -- TODO: This can be faster if we don't allocate a cuda tensor every time
     local output = model:forward(input:resize(1, table.unpack((#input):totable())):cuda())
     output[1] = nn.SoftMax():forward(output[1]:double())
     return output
 end
-
 
 -----------------------
 -- Print things
