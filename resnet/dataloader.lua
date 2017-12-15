@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-11 10:33:01
+-- @Last Modified time: 2017-12-15 22:48:53
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -59,8 +59,13 @@ local parse_and_put = argcheck{
 get_dataloader = argcheck{
     doc = [[
         bridge the sgf dataset and the inputs and labels required by network training
+        Dataset must be saved in torchnet.IndexedDataset format
+
         usage:
-        > d = get_dataloader('test', opt.batch_size)
+        > d = get_dataloader('./dataset/kgs_test', opt.batch_size)
+        -- daatset/kgs_test.bin & daatset/kgs_test.idx must exist
+        -- refer to https://github.com/torchnet/torchnet for detail
+
         > d.load_random_game()
         > for ind, input, label in d do
         >   model:forward(input)
@@ -69,21 +74,20 @@ get_dataloader = argcheck{
         label = { a = <a batch_size-d vector>, z = <a batch_size-d vector> }
         refer to `parse_and_put` for meanings of features, `a` and `z`
     ]],
-    {name = 'partition', type='string', help='"test" or "train"'},
+    {name = 'dataset_path', type='string', help='relative path to the torchnet.IndexedDataset file'},
     {name = 'opt', type='table'},
-    call = function (partition, opt)
+    call = function (dataset_path, opt)
         for _, name in pairs{'batch_size', 'data_augment', 'data_pool_size'} do
             assert(opt[name] ~= nil, "No '"..name.."' found in opt")
         end
-        batch_size = opt.batch_size
-        use_augment = not opt.debug and opt.data_augment
-        pool_size = opt.debug and -1 or opt.data_pool_size
+        local batch_size = opt.batch_size
+        local use_augment = not opt.debug and opt.data_augment
+        local pool_size = opt.debug and -1 or opt.data_pool_size
 
         math.randomseed(os.time())
 
-        local name = 'kgs_' .. partition
-        local dataset = tnt.IndexedDataset{fields = { name }, path = './dataset'}
-        local batch_size = batch_size
+        local name, dataset_dir = paths.basename(dataset_path), paths.dirname(dataset_path)
+        local dataset = tnt.IndexedDataset{fields = { name }, path = dataset_dir}
 
         local game = nil
         local game_idx = 0
@@ -97,9 +101,10 @@ get_dataloader = argcheck{
         -- loading games
         -----------------------
         local function load_game(idx)
-            local content = dataset:get(idx)[name].table.content
+            local sgf_string = dataset:get(idx)[name].table.content:storage():string()
+
             game_idx = idx
-            game = sgf.parse(content:storage():string(), name)
+            game = sgf.parse(sgf_string, name)
             game.ply = 1
             CBoard.clear(board)
 

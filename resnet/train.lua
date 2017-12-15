@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-12 11:00:15
+-- @Last Modified time: 2017-12-15 22:49:56
 
 local doc = [[
     The following script should always be the entrance of the training procedure
@@ -15,8 +15,8 @@ local opt = pl.lapp[[
     ** Dataset Options  **
     --batch_size         (default 24)       The number of positions in each batch, 2048 in AlphaGo Zero thesis
     --data_augment                          use rotation/reflection to augment dataset
-    --verbose                               Whether print data loading detailsv
     --data_pool_size     (default 240)      Use a pool to buffer and shuffle the inputs better
+    --verbose                               Whether print data loading detailsv
     --debug                                 If given, no shuffling or augmentation will be performed
 
     ** Training Options  **
@@ -61,8 +61,8 @@ local Trainer = require 'resnet.trainer'
 local net = resnet.create_model(opt)
 local crit = resnet.create_criterion(opt)
 
-local train_dataloader = get_dataloader('train', opt)
-local test_dataloader = get_dataloader('test', opt)
+local train_dataloader = get_dataloader('./dataset/kgs_train', opt)
+local test_dataloader = get_dataloader('./dataset/kgs_test', opt)
 
 local trainer = Trainer(net, crit, opt, train_dataloader, test_dataloader)
 if opt.test then
