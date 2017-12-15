@@ -94,7 +94,6 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
             m[player_str] = ''
             x, y = 0, 0
         else
-            -- Write the location in sgf format
             local player_str, coord_str = sgf.compose_move(x, y, b._next_player)
             m[player_str] = coord_str
         end
@@ -130,7 +129,6 @@ function self_play.train(b, dcnn_opt1, dcnn_opt2, opt)
         if #res.moves <= opt.sample_step then
             print(string.format("Bad sample --- moves: %d, sample_step: %d", #res.moves, opt.sample_step))
         else
-            -- Write the SGF file
             local footprint = string.format("%s-%s__%d", utils.get_signature(), utils.get_randString(6), b._ply)
             local srcSGF = string.format("%s.sgf", footprint)
             local f = assert(io.open(srcSGF, 'w'))
@@ -155,11 +153,6 @@ function self_play.train(b, dcnn_opt1, dcnn_opt2, opt)
 
             f:write(sgf.sgf_string(header, res.moves))
             f:close()
-
-            if opt.copy_path ~= "" then
-                local cpycmd = string.format("cp %s %s", srcSGF, opt.copy_path)
-                os.execute(cpycmd)
-            end
         end
         collectgarbage()
         collectgarbage()

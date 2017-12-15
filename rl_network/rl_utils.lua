@@ -10,6 +10,9 @@ local board = require('board.board')
 local common = require("common.common")
 local pl = require 'pl.import_into'()
 
+utils.require_torch()
+utils.require_cutorch()
+
 local rl_utils = {}
 
 function rl_utils.sample(probs, ply)
@@ -84,25 +87,15 @@ function rl_utils.play_with_cnn(b, player, net)
 end
 
 function rl_utils.rl_init(options)
-    -- opt.feature_type and opt.userank are necessary for the game to be played.
     local opt = pl.tablex.deepcopy(options)
-    opt.sample_step = opt.sample_step or -1
-    opt.temperature = opt.temperature or 1
-    opt.shuffle_top_n = opt.shuffle_top_n or 1
-    opt.rank = opt.rank or '9d'
-
-    if opt.usecpu == nil or opt.usecpu == false then
-        utils = require 'utils.utils'
-        utils.require_torch()
-        utils.require_cutorch()
-    else
-        g_nnutils_only_cpu = true
-        utils = require 'utils.utils'
-    end
+    opt.sample_step = -1
+    opt.shuffle_top_n = 300
+    opt.rank = '9d'
+    opt.handi = 0
+    opt.komi = 7.5
+    opt.feature_type = 'old'
 
     opt.userank = true
-    assert(opt.shuffle_top_n >= 1)
-
     opt.attention = { 1, 1, common.board_size, common.board_size }
 
     local opt1, opt2 = pl.tablex.deepcopy(opt), pl.tablex.deepcopy(opt)
@@ -119,50 +112,10 @@ function rl_utils.rl_init(options)
     local model_name1 = opt.use_local_model and pl.path.basename(opt1.input) or opt1.input
     local model_name2 = opt.use_local_model and pl.path.basename(opt2.input) or opt2.input
 
-    if opt.verbose then print("Load model 1 " .. model_name1) end
     local model1 = torch.load(model_name1)
-    if opt.verbose then print("Load model 1 complete") end
-
-    if opt.verbose then print("Load model 2 " .. model_name2) end
     local model2 = torch.load(model_name2)
-    if opt.verbose then print("Load model 2 complete") end
 
-    local preSampleModel1, preSampleModel2
-    local preSampleOpt1, preSampleOpt2 = pl.tablex.deepcopy(opt1), pl.tablex.deepcopy(opt2)
-
-    if opt.temperature > 1 then
-        if opt.verbose then print("temperature: " , opt.temperature) end
-        preSampleModel1 = goutils.getDistillModel(model1, opt.temperature)
-        preSampleModel2 = goutils.getDistillModel(model2, opt.temperature)
-    else
-        if opt.presample_codename1 ~= nil and opt.presample_codename1 ~= false then
-            local code = common.codenames[opt.presample_codename1]
-            if opt.verbose then print("Load preSampleModel 1 " .. code.model_name) end
-            preSampleModel1 = torch.load(code.model_name)
-            preSampleOpt1.feature_type = code.feature_typ
-        else
-            preSampleModel1 = model1
-        end
-
-        if opt.presample_codename2 ~= nil and opt.presample_codename2 ~= false then
-            local code = common.codenames[opt.presample_codename2]
-            if opt.verbose then print("Load preSampleModel 2 " .. code.model_name) end
-            preSampleModel2 = torch.load(code.model_name)
-            preSampleOpt2.feature_type = code.feature_typ
-        else
-            preSampleModel2 = model2
-        end
-    end
-
-    opt1.preSampleModel, opt2.preSampleModel = preSampleModel1, preSampleModel2
-    opt1.preSampleOpt, opt2.preSampleOpt = preSampleOpt1, preSampleOpt2
     opt1.model, opt2.model = model1, model2
-    if opt.valueModel and opt.valueModel ~= "" then
-        opt1.valueModel = torch.load(opt.valueModel)
-        opt2.valueModel = torch.load(opt.valueModel)
-    end
-
-    if opt.verbose then print("dcnn ready!") end
 
     return opt1, opt2
 end
