@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-13 16:41:27
+-- @Last Modified time: 2017-12-16 10:01:29
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -167,6 +167,7 @@ function Trainer:train()
         epoch_timer:reset()
     end
 
+    -- save after-training checkpoint
     if math.fmod(opt.epochs, opt.epoch_per_ckpt) ~= 0 then
         self.net:clearState()
         self:save(e, string.format('e%04d.params', opt.epochs))
@@ -176,7 +177,7 @@ end
 
 function Trainer:test()
     if self.test_dataloader == nil then
-        self:log("** No test dataloader given. Can't carry out test.")
+        self:log("** No test dataloader given. Skip test.")
         return
     end
 
@@ -261,6 +262,7 @@ function Trainer:save(epoch, filename)
         optim_state = self.optim_state
     }
     obj.optim_state.dfdx = nil -- at the cost of losing momentum, shrink ckpt's size
+    filename = self.opt.ckpt_prefix..'.'..filename
     torch.save(paths.concat(self.opt.ckpt_dir, filename), obj)
     self:log("checkpoint '"..filename.."' saved")
 end

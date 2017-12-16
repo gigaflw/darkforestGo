@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-15 22:48:53
+-- @Last Modified time: 2017-12-16 10:07:58
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -80,31 +80,50 @@ get_dataloader = argcheck{
         for _, name in pairs{'batch_size', 'data_augment', 'data_pool_size'} do
             assert(opt[name] ~= nil, "No '"..name.."' found in opt")
         end
-        local batch_size = opt.batch_size
-        local use_augment = not opt.debug and opt.data_augment
-        local pool_size = opt.debug and -1 or opt.data_pool_size
-
         math.randomseed(os.time())
 
-        local name, dataset_dir = paths.basename(dataset_path), paths.dirname(dataset_path)
-        local dataset = tnt.IndexedDataset{fields = { name }, path = dataset_dir}
+        local dataset_name, dataset_dir = paths.basename(dataset_path), paths.dirname(dataset_path)
+        local dataset = tnt.IndexedDataset{fields = { dataset_name }, path = dataset_dir}
+
+        if opt.max_batches == -1 then
+            opt.max_batches = math.floor(dataset:size() / opt.batch_size)
+            assert(opt.max_batches > 0,  string.format(
+                "Too small a dataset with size %d against batch size %d", dataset:size(), opt.batch_size)
+            )
+            print("opt.max_batches is adapted to "..opt.max_batches)
+        end
 
         local game = nil
         local game_idx = 0
         local board = CBoard.new()
 
-        local last_features = torch.FloatTensor(opt.n_feature, 19, 19)
+        local last_features = torch.FloatTensor(opt.n_feature, 19, 19) -- no use now
         local augment = nil -- augment style should be consistent during a single game
 
         if opt.debug then print("Dataloader in debug mode!") end
+
         -----------------------
         -- loading games
         -----------------------
+        local function _get_sgf_string(idx)
+            -- how we parse dataset is decided by how it is created
+            -- for 'kgs_test' & 'kgs_train', they are created by facebook team
+            -- for others, they are created in 'resnet.rl_train._save_sgf_to_dataset'
+            -- here is a tight coupling, use dependency injection to solve it
+            --  if more custom dataset are to be added
+            if dataset_name == 'kgs_test' or dataset_name == 'kgs_train' then
+                return dataset:get(idx)[dataset_name].table.content:storage():string()
+            else
+                return dataset:get(idx)[dataset_name].sgf
+            end
+        end
+
+        local use_augment = not opt.debug and opt.data_augment
         local function load_game(idx)
-            local sgf_string = dataset:get(idx)[name].table.content:storage():string()
+            local sgf_string = _get_sgf_string(idx)
 
             game_idx = idx
-            game = sgf.parse(sgf_string, name)
+            game = sgf.parse(sgf_string, dataset_name)
             game.ply = 1
             CBoard.clear(board)
 
@@ -127,7 +146,8 @@ get_dataloader = argcheck{
         -- iterator interface
         -----------------------
         local function _parse_next_position()
-            local load = opt.debug and load_next_game or load_random_game 
+            local load = opt.debug and load_next_game or 
+                ({sample = load_random_game, traverse = load_next_game})[opt.style]
             if game == nil or game.ply - 1 >= game:num_round() then
                 repeat load() until game:num_round() > 0
             end
@@ -139,6 +159,7 @@ get_dataloader = argcheck{
         end
 
         local data_pool = {}
+        local pool_size = opt.debug and -1 or opt.data_pool_size
         local function _get_data_from_pool()
             if pool_size == -1 then return _parse_next_position()() end
 
@@ -153,11 +174,11 @@ get_dataloader = argcheck{
         end
 
         -- reusing tensors to save memory
-        local s = torch.FloatTensor(batch_size, opt.n_feature, 19, 19)
-        local a = torch.FloatTensor(batch_size)
-        local z = torch.FloatTensor(batch_size)
+        local s = torch.FloatTensor(opt.batch_size, opt.n_feature, 19, 19)
+        local a = torch.FloatTensor(opt.batch_size)
+        local z = torch.FloatTensor(opt.batch_size)
         local shuffle = {}
-        for i = 1, batch_size do shuffle[i] = i end
+        for i = 1, opt.batch_size do shuffle[i] = i end
 
         local function _iter_batch(max_batches, ind)
             ind = ind + 1
@@ -166,13 +187,14 @@ get_dataloader = argcheck{
             s:zero(); a:zero(); z:zero()
 
             if not opt.debug then
-                for i = 1, batch_size do
-                    j = math.random(i, batch_size)
+                -- in-batch shuffle
+                for i = 1, opt.batch_size do
+                    j = math.random(i, opt.batch_size)
                     shuffle[i], shuffle[j] = shuffle[j], shuffle[i]
                 end
             end
 
-            for i = 1, batch_size do
+            for i = 1, opt.batch_size do
                 local data = _get_data_from_pool()
                 s[shuffle[i]] = data.s
                 a[shuffle[i]] = data.a

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-15 22:49:56
+-- @Last Modified time: 2017-12-16 09:58:16
 
 local doc = [[
     The following script should always be the entrance of the training procedure
@@ -14,6 +14,7 @@ local opt = pl.lapp[[
 
     ** Dataset Options  **
     --batch_size         (default 24)       The number of positions in each batch, 2048 in AlphaGo Zero thesis
+    --style              (default 'sample') 'sample': select samples at random; 'traverse': select data in order
     --data_augment                          use rotation/reflection to augment dataset
     --data_pool_size     (default 240)      Use a pool to buffer and shuffle the inputs better
     --verbose                               Whether print data loading detailsv
@@ -26,6 +27,7 @@ local opt = pl.lapp[[
     --epoch_per_test     (default 1)        The number of epochs per testing
     --epoch_per_ckpt     (default 10)       The number of epochs per saving checkpoints
     --ckpt_dir           (default './resnet.ckpt')    Where to store the checkpoints
+    --ckpt_prefix        (default '')       Extra info to be prepended to checkpoint files
     --resume_ckpt        (default '')       Whether resume some checkpoints before training
     --continue                              Whether resume epochs (otherwise epoch will begin with 1)
 

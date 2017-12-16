@@ -1,37 +1,45 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-15 16:44:05
+-- @Last Modified time: 2017-12-16 10:13:35
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
 ]]
 
 local pl = require 'pl.import_into'()
+local tnt = require 'torchnet'
+
 local Trainer = require 'resnet.trainer'
+local resnet = require 'resnet.resnet'
 local get_dataloader = require 'resnet.dataloader'
--- this doesn't mean you can call it from command line
+
+-- this pl.lapp doesn't mean you can call it from command line
 -- only to keep in conformity with resnet.train.lua
 local default_opt = pl.lapp[[
-    --test               If true, only run the test epoch
     --log_file           (default '')       If given, log will be saved
 
     ** Dataset Options  **
+    --dataset_dir        (default './dataset')
+    --style              (default 'traverse')   'sample': select samples at random; 'traverse': select data in order
     --batch_size         (default 24)       The number of positions in each batch, 2048 in AlphaGo Zero thesis
     --data_augment                          use rotation/reflection to augment dataset
+    --data_pool_size     (default -1)       Use a pool to buffer and shuffle the inputs better
     --verbose                               Whether print data loading detailsv
-    --data_pool_size     (default 240)      Use a pool to buffer and shuffle the inputs better
     --debug                                 If given, no shuffling or augmentation will be performed
 
     ** Training Options  **
-    --max_batches        (default 20)       The number of batches in each epoch (commonly 1 epoch means to go through all data, however here it is too large)
-    --test_batches       (default 20)       The number of batches when testing
-    --epochs             (default 100)      The number of epochs
-    --epoch_per_test     (default 1)        The number of epochs per testing
+    --max_batches        (default 20)       -1 means each epoch will go through all data
+    --epochs             (default 100)      The number of epochs, where all data will trained once
     --epoch_per_ckpt     (default 10)       The number of epochs per saving checkpoints
-    --ckpt_dir           (default '')       Where to store the checkpoints
+    --ckpt_dir           (default './resnet.ckpt')    Where to store the checkpoints
+    --ckpt_prefix        (default '')       Extra info to be prepended to checkpoint files
     --resume_ckpt        (default '')       Whether resume some checkpoints before training
     --continue                              Whether resume epochs (otherwise epoch will begin with 1)
+
+    *-- for rl training, there is no test. Set the option to prevent undefined behavior --*
+    --test_batches       (default 1)        The number of batches when testing
+    --epoch_per_test     (default 1)        The number of epochs per testing
 
     ** GPU Options  **
     --use_gpu
@@ -53,6 +61,15 @@ local default_opt = pl.lapp[[
 ]]
 
 
+local function _save_sgf_to_dataset(dataset, name)
+    local doc = [[
+        Save an array of sgf strings into dataset file in the format of torchnet.IndexedDataset.
+    ]]
+    local writer = tnt.IndexedDatasetWriter(name..'.idx', name..'.bin', 'table')
+    for _, d in pairs(dataset) do writer:add({sgf = d}) end
+    writer:close()
+end
+
 local export = {}
 
 function export.get_opt(custom_opt)
@@ -70,7 +87,7 @@ function export.get_opt(custom_opt)
     return ret
 end
 
-function export.train_on_the_fly(model, dataset, opt)
+function export.train_on_the_fly(model, dataset, name, opt)
     local doc = [[
         This function is to be called by reinforcement learning code,
         which can train the model with the given dataset on the fly.
@@ -80,22 +97,15 @@ function export.train_on_the_fly(model, dataset, opt)
         @param: model:
             a network given by `resnet.resnet.create_model' or `torch.load(<ckpt>).net`
         @param: dataset: 
-            the custom dataset, an array in the format of:
-            {
-                {
-                    b = the current board
-                    m = moveIdx, an integer in [1, 19*19+1], denoting the right move, the extra '+1' means pass.
-                        Should it be a pass, a = 19*19+1
-                    p = `common.black` | `common.white`, who is to play
-                    w = `common.black` | `common.white`, who wins
-                },
-                ...
-            }
+            an array of sgf strings, given by `sgf.sgf_string`
+        @param: name:
+            The name for checkpoints and generated dataset, no extension name needed.
+            Use epoch or version name.
         @param: opt:
             If not given, the default rl opt will be used.
             If you want to modify the default opt, pass in the returned value of `get_opt`
 
-        usage:
+        demo:
             local resnet_rl = require 'resnet.rl_train'
             local train = resnet_rl.train_on_the_fly
 
@@ -103,23 +113,27 @@ function export.train_on_the_fly(model, dataset, opt)
                 dataset = {}
                 for g = 1, games_per_epoch do
                     < self-play for one game >
-                    < insert data into dataset >
+                    < insert sgf string into dataset >
                 end
 
-                train(model, dataset)
+                train(model, dataset, string.format("rl%04d", e))
                 .. -- will return after training ends; arg `model` will have been updated then
                 < select current best model >
             end
     ]]
 
     if opt == nil then opt = default_opt end
+    if opt.ckpt_prefix == '' then opt.ckpt_prefix = name end
 
     local crit = resnet.create_criterion(opt)
-    local dataloader = get_dataloader('custom', opt)
-    -- TODO
+
+    local dataset_path = paths.concat(opt.dataset_dir, name)
+    _save_sgf_to_dataset(dataset, dataset_path)  -- generate .bin & .idx file
+
+    local dataloader = get_dataloader(dataset_path, opt)
     local trainer = Trainer(model, crit, opt, dataloader)
 
-    trainer.train()
+    trainer:train()
 end
 
 return export
