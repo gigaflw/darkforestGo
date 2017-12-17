@@ -19,8 +19,21 @@ local opt = pl.lapp[[
     --num_games_per_epoch  (default 2)              The number of games to be played in an epoch.
     --pipe_path            (default "../../dflog")  Pipe path
     --sgf_save                                      Whether save sgf file per game in rl_training.
+
+    ** GPU Options  **
+    --use_gpu            (default true)     No use when there is no gpu devices
+    --device             (default 3)        which core to use on a multicore GPU environment
 ]]
 
 local opt = rl_utils.rl_init(opt)
+
+local util = require 'resnet.util'
+opt.use_gpu = opt.use_gpu and util.have_gpu() -- only use gpu when there is one
+
+if opt.use_gpu then
+    require 'cutorch'
+    cutorch.setDevice(opt.device)
+    print('use gpu device '..opt.device)
+end
 
 self_play.train(opt)

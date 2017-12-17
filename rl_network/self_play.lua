@@ -5,11 +5,6 @@
 
 local utils = require("utils.utils")
 
-utils.require_torch()
-utils.require_cutorch()
-
-cutorch.setDevice(2)
-
 local board = require("board.board")
 local om = require("board.ownermap")
 local dp = require("pachi_tactics.moggy")
