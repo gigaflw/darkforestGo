@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-17 13:12:44
+-- @Last Modified time: 2017-12-17 17:29:10
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -15,52 +15,50 @@ local Trainer = require 'resnet.trainer'
 local resnet = require 'resnet.resnet'
 local get_dataloader = require 'resnet.dataloader'
 
--- this pl.lapp doesn't mean you can call it from command line
--- only to keep in conformity with resnet.train.lua
-local default_opt = pl.lapp[[
-    --log_file           (default '')       If given, log will be saved
+-- the entry here should be exactly same with resnet.train.lua
+-- possible undefined behavior otherwise
+local default_opt = {
+    log_file = '',                  -- If given, log will be saved
 
-    ** Dataset Options  **
-    --dataset_dir        (default './dataset')
-    --style              (default 'traverse')   'sample': select samples at random; 'traverse': select data in order
-    --batch_size         (default 24)       The number of positions in each batch, 2048 in AlphaGo Zero thesis
-    --data_augment                          use rotation/reflection to augment dataset
-    --data_pool_size     (default -1)       Use a pool to buffer and shuffle the inputs better
-    --verbose                               Whether print data loading detailsv
-    --debug                                 If given, no shuffling or augmentation will be performed
+    ---- Dataset Options ----
+    dataset_dir = './dataset',
+    style = 'traverse',             -- 'sample': select samples at random; 'traverse': select data in order
+    batch_size = 24,                -- The number of positions in each batch, 2048 in AlphaGo Zero thesis
+    data_augment = false,           -- use rotation/reflection to augment dataset
+    data_pool_size = -1,            -- Use a pool to buffer and shuffle the inputs better
+    verbose = false,                -- Whether print data loading detailsv
+    debug = false,                  -- If given, no shuffling or augmentation will be performed
 
-    ** Training Options  **
-    --max_batches        (default 20)       -1 means each epoch will go through all data
-    --epochs             (default 100)      The number of epochs, where all data will trained once
-    --epoch_per_ckpt     (default 10)       The number of epochs per saving checkpoints
-    --ckpt_dir           (default './resnet.ckpt')    Where to store the checkpoints
-    --ckpt_prefix        (default '')       Extra info to be prepended to checkpoint files
-    --resume_ckpt        (default '')       Whether resume some checkpoints before training
-    --continue                              Whether resume epochs (otherwise epoch will begin with 1)
+    ---- Training Options ----
+    max_batches = 20,               -- -1 means each epoch will go through all data
+    epochs = 100,                   -- The number of epochs, where all data will trained once
+    epoch_per_ckpt = 10,            -- The number of epochs per saving checkpoints
+    ckpt_dir = './resnet.ckpt',     -- Where to store the checkpoints
+    ckpt_prefix = '',               -- Extra info to be prepended to checkpoint files
+    resume_ckpt = '',               -- Whether resume some checkpoints before training
+    continue = false,               -- Whether resume epochs (otherwise epoch will begin with 1)
 
-    *-- for rl training, there is no test. Set the option to prevent undefined behavior --*
-    --test_batches       (default 1)        The number of batches when testing
-    --epoch_per_test     (default 1)        The number of epochs per testing
+    -- for rl training, there is no test. Set the option to prevent undefined behavior
+    test_batches = 1,               --  The number of batches when testing
+    epoch_per_test = 1,             -- The number of epochs per testing
 
-    ** GPU Options  **
-    --use_gpu            (default true)     No use when there is no gpu devices
+    ---- GPU Options ----
+    use_gpu = util.have_gpu(),      -- No use when there is no gpu devices
 
-    ** Network Options  **
-    --n_res              (default 2)        The number of residual blocks in the resnet, 19 or 39 according to the thesis
-    --n_channel          (default 64)       The number of channels in each residual block, 256 in the thesis
-    --n_feature          (default 12)       The number of feature planes, this should be in accordence with feature extraction function in util.lua
-    --activation         (default 'ELU')    The type of activation function, 'ReLu' | 'ELU'
-    --acti_param         (default 0.1)      Activation parameter, incase activation other than ReLU is used
-    --value_weight       (default 1.0)      Loss = Policy Loss + weight * Value Loss
+    ---- Network Options ----
+    n_res = 2,                      -- The number of residual blocks in the resnet, 19 or 39 according to the thesis
+    n_channel = 64,                 -- The number of channels in each residual block, 256 in the thesis
+    n_feature = 12,                 -- The number of feature planes, this should be in accordence with feature extraction function in util.lua
+    activation = 'ELU',             -- The type of activation function, 'ReLu' | 'ELU'
+    acti_param = 0.1,               -- Activation parameter, incase activation other than ReLU is used
+    value_weight = 1.0,             -- Loss = Policy Loss + weight * Value Loss
 
-    ** Optimizer Options  **
-    --lr                (default 0.1)       learning rate
-    --lr_decay          (default 5e-5)      learning rate decay
-    --wd                (default 1e-4)      weight decay, exactly L2 regularization
-    --momentum          (default 0.9)
-]]
-
-default_opt.use_gpu = default_opt.use_gpu and util.have_gpu() -- only use gpu when there is one
+    ---- Optimizer Options ----
+    lr = 0.1,                       -- learning rate
+    lr_decay = 5e-5,                -- learning rate decay
+    wd = 1e-4,                       -- weight decay, exactly L2 regularization
+    momentum = 0.9,
+}
 
 local function _save_sgf_to_dataset(dataset, name)
     local doc = [[
