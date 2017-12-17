@@ -53,6 +53,10 @@ common.codenames = {
         model_name = paths.concat(script_path, "../resnet.ckpt/15/latest.params"),
         feature_type = 'custom'
     },
+    resnet_16 = {
+        model_name = paths.concat(script_path, "../resnet.ckpt/16/latest.params"),
+        feature_type = 'custom'
+    },
     resnet_17 = {
         model_name = paths.concat(script_path, "../resnet.ckpt/17/latest.params"),
         feature_type = 'custom'

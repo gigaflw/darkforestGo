@@ -10,12 +10,12 @@ local rl_utils = require("rl_network.rl_utils")
 local pl = require 'pl.import_into'()
 
 local opt = pl.lapp[[
-    --codename1            (default "resnet_17")    Code name AI1 for models. If this is not empty then --input will be omitted.
+    --codename1            (default "resnet_16")    Code name AI1 for models. If this is not empty then --input will be omitted.
     --codename2            (default "resnet_18")    Code name AI2 for models.
     --sample_step          (default -1)             If the step of a game is less than the threshold, it is a bad sample.
     --resign                                        Whether support resign in rl_training.
     --num_epoches          (default 1)              The number of batches in rl_training.
-    --num_games_per_epoch  (default 1)              The number of games to be played in an epoch.
+    --num_games_per_epoch  (default 2)              The number of games to be played in an epoch.
     --pipe_path            (default "../../dflog")  Pipe path
 ]]
 

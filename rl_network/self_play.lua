@@ -244,7 +244,11 @@ function self_play.play(dcnn_opt1, dcnn_opt2, opt)
     for batch = 1, opt.num_games_per_epoch do
         print(string.format("Play game: %d/%d", batch, opt.num_games_per_epoch))
         board.clear(b)
-        local res = self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
+
+        local opt1 = batch % 2 == 1 and dcnn_opt1 or dcnn_opt2
+        local opt2 = batch % 2 == 1 and dcnn_opt2 or dcnn_opt1
+
+        local res = self_play.play_one_game(b, opt1, opt2, opt)
 
         if #res.moves <= opt.sample_step then
             print(string.format("Bad sample --- moves: %d, sample_step: %d", #res.moves, opt.sample_step))
@@ -260,15 +264,15 @@ function self_play.play(dcnn_opt1, dcnn_opt2, opt)
             local date = utils.get_current_date()
             local header = {
                 result = re,
-                player_b = opt.codename1,
-                player_w = opt.codename2,
+                player_b = opt1.codename,
+                player_w = opt2.codename,
                 date = date,
                 komi = opt.komi
             }
 
             local sgf_str = sgf.sgf_string(header, res.moves)
 
-            local footprint = string.format("%s-%s__%d", utils.get_signature(), utils.get_randString(6), b._ply)
+            local footprint = string.format("%s-%s-%s__%s__%d", utils.get_signature(), header.player_b, header.player_w, utils.get_randString(6), b._ply)
             local srcSGF = string.format("%s.sgf", footprint)
             local f = assert(io.open(srcSGF, 'w'))
 
