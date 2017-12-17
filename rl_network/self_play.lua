@@ -156,9 +156,7 @@ function self_play.train_per_epoch(b, opt, epoch)
         collectgarbage()
     end
 
-    print(sgf_dataset)
-
-    resnet_rl.train_on_the_fly(opt.model, sgf_dataset, string.format("rl%04d", epoch))
+    resnet_rl.train_on_the_fly(opt.model.net, sgf_dataset, string.format("rl%04d", epoch))
 
     dp.free(def_policy)
     om.free(ownermap)
