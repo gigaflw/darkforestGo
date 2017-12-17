@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-16 10:13:35
+-- @Last Modified time: 2017-12-17 13:12:44
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -10,6 +10,7 @@ local doc = [[
 local pl = require 'pl.import_into'()
 local tnt = require 'torchnet'
 
+local util = require 'resnet.util'
 local Trainer = require 'resnet.trainer'
 local resnet = require 'resnet.resnet'
 local get_dataloader = require 'resnet.dataloader'
@@ -42,8 +43,7 @@ local default_opt = pl.lapp[[
     --epoch_per_test     (default 1)        The number of epochs per testing
 
     ** GPU Options  **
-    --use_gpu
-    --device             (default 3)        which core to use on a multicore GPU environment
+    --use_gpu            (default true)     No use when there is no gpu devices
 
     ** Network Options  **
     --n_res              (default 2)        The number of residual blocks in the resnet, 19 or 39 according to the thesis
@@ -60,6 +60,7 @@ local default_opt = pl.lapp[[
     --momentum          (default 0.9)
 ]]
 
+default_opt.use_gpu = default_opt.use_gpu and util.have_gpu() -- only use gpu when there is one
 
 local function _save_sgf_to_dataset(dataset, name)
     local doc = [[

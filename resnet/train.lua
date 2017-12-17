@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-16 09:58:16
+-- @Last Modified time: 2017-12-17 13:11:58
 
 local doc = [[
     The following script should always be the entrance of the training procedure
@@ -32,7 +32,7 @@ local opt = pl.lapp[[
     --continue                              Whether resume epochs (otherwise epoch will begin with 1)
 
     ** GPU Options  **
-    --use_gpu
+    --use_gpu                               No use when there is no gpu devices
     --device             (default 3)        which core to use on a multicore GPU environment
 
     ** Network Options  **
@@ -49,6 +49,9 @@ local opt = pl.lapp[[
     --wd                (default 1e-4)      weight decay, exactly L2 regularization
     --momentum          (default 0.9)
 ]]
+
+local util = require 'resnet.util'
+opt.use_gpu = opt.use_gpu and util.have_gpu() -- only use gpu when there is one
 
 if opt.use_gpu then
     require 'cutorch'

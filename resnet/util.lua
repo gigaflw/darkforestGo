@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-13 16:42:52
+-- @Last Modified time: 2017-12-17 13:06:22
 
 local pl = require 'pl.import_into'()
 
@@ -19,6 +19,7 @@ local ffi = require 'ffi'
 local C = ffi.load(paths.concat(common.script_path(), "../libs/libboard.so"))
 
 local util = {}
+
 -----------------------
 -- Feature & Label Extraction
 -----------------------
@@ -183,8 +184,12 @@ function util.play(model, board, player)
 end
 
 -----------------------
--- Print things
+-- Misc
 -----------------------
+function util.have_gpu()
+    return pl.path.exists("/dev/nvidiactl")
+end
+
 function util.print_grad(net, file)
     local need_print = { SpatialConvolution='conv', SpatialBatchNormalization='bn', }
     
