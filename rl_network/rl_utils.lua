@@ -91,6 +91,25 @@ function rl_utils.rl_init(opt)
     return opt
 end
 
+function rl_utils.train_play_init(old_model, new_model, old_model_name, new_model_name)
+    local opt = {}
+    opt.handi = 0
+    opt.komi = 7.5
+    opt.num_games = 2
+    opt.sample_step = -1
+    opt.pipe_path = "../../dflog"
+
+    local opt1, opt2 = pl.tablex.deepcopy(opt), pl.tablex.deepcopy(opt)
+
+    opt1.model = old_model
+    opt2.model = new_model
+
+    opt1.codename = old_model_name
+    opt2.codename = new_model_name
+
+    return opt, opt1, opt2
+end
+
 function rl_utils.play_init(opt)
     opt.shuffle_top_n = 300
     opt.rank = '9d'

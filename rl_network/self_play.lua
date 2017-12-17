@@ -1,4 +1,3 @@
---
 -- Created by HgS_1217_
 -- Date: 2017/11/11
 --
@@ -161,7 +160,14 @@ function self_play.train(opt)
     local b = board.new()
 
     for epoch = 1, opt.num_epoches do
+        local old_model = pl.tablex.deepcopy(opt.model)
         self_play.train_per_epoch(b, opt, epoch)
+
+        local play_opt, opt1, opt2 = rl_utils.train_play_init(old_model, opt.model,
+            string.format("resnet_rl%04d", epoch-1), string.format("resnet_rl%04d", epoch))
+        local b_win, w_win, differential = self_play.play(opt1, opt2, play_opt)
+
+        print(string.format('b_win = %d, w_win = %d, differential = %d', b_win, w_win, differential))
     end
 end
 
@@ -233,9 +239,10 @@ end
 
 function self_play.play(dcnn_opt1, dcnn_opt2, opt)
     local b = board.new()
+    local b_win, w_win, differential = 0, 0, 0
 
-    for batch = 1, opt.num_games_per_epoch do
-        print(string.format("Play game: %d/%d", batch, opt.num_games_per_epoch))
+    for batch = 1, opt.num_games do
+        print(string.format("Play game: %d/%d", batch, opt.num_games))
         board.clear(b)
 
         local opt1 = batch % 2 == 1 and dcnn_opt1 or dcnn_opt2
@@ -249,10 +256,15 @@ function self_play.play(dcnn_opt1, dcnn_opt2, opt)
             local re
             if res.resign_side == common.white then
                 re = "B+Resign"
+                b_win = b_win + 1
+                differential = differential + 360
             elseif res.resign_side == common.black then
                 re = "W+Resign"
+                w_win = w_win + 1
+                differential = differential - 360
             else
                 re = res.score > 0 and string.format("B+%.1f", res.score) or string.format("W+%.1f", -res.score)
+                differential = differential + res.score
             end
             local date = utils.get_current_date()
             local header = {
@@ -277,6 +289,8 @@ function self_play.play(dcnn_opt1, dcnn_opt2, opt)
 
     dp.free(def_policy)
     om.free(ownermap)
+
+    return b_win, w_win, differential
 end
 
 return self_play
