@@ -178,7 +178,7 @@ function util.play(model, board, player)
 
     -- TODO: This can be faster if we don't allocate a cuda tensor every time
     local output = model:forward(input:resize(1, table.unpack((#input):totable())):cuda())
-    output[1] = nn.SoftMax():forward(output[1]:double())
+    output[1] = nn.SoftMax():forward(output[1]:float())
     return output
 end
 

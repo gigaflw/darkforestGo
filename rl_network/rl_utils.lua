@@ -3,15 +3,10 @@
 -- Date: 2017/11/29
 --
 
-local utils
 local resnet_util = require("resnet.util")
 local goutils = require("utils.goutils")
-local board = require('board.board')
 local common = require("common.common")
 local pl = require 'pl.import_into'()
-
-utils.require_torch()
-utils.require_cutorch()
 
 local rl_utils = {}
 
@@ -81,14 +76,22 @@ function rl_utils.play_with_cnn(b, player, net)
         print("not find a valid move in ", max_iter, " iterations ..")
     end
 
-    print(tostring(b._ply) .. "\t" .. tostring(index) .. "\t" .. tostring(probs[index]))
+--    print(tostring(b._ply) .. "\t" .. tostring(index) .. "\t" .. tostring(probs[index]))
 
     return x, y, win_rate
 end
 
-function rl_utils.rl_init(options)
-    local opt = pl.tablex.deepcopy(options)
-    opt.sample_step = -1
+function rl_utils.rl_init(opt)
+    opt.handi = 0
+    opt.komi = 7.5
+
+    opt.input = common.codenames[opt.model_name].model_name
+    opt.model = torch.load(opt.input)
+
+    return opt
+end
+
+function rl_utils.play_init(opt)
     opt.shuffle_top_n = 300
     opt.rank = '9d'
     opt.handi = 0
@@ -100,8 +103,8 @@ function rl_utils.rl_init(options)
 
     local opt1, opt2 = pl.tablex.deepcopy(opt), pl.tablex.deepcopy(opt)
 
-    opt1.input = (opt.codename == "" and opt.input or common.codenames[opt.codename1].model_name)
-    opt2.input = (opt.codename == "" and opt.input or common.codenames[opt.codename2].model_name)
+    opt1.input = common.codenames[opt.codename1].model_name
+    opt2.input = common.codenames[opt.codename2].model_name
 
     opt1.codename = opt.codename1
     opt2.codename = opt.codename2
@@ -109,8 +112,8 @@ function rl_utils.rl_init(options)
     opt1.feature_type = opt.codename == "" and opt.feature_type or common.codenames[opt.codename1].feature_type
     opt2.feature_type = opt.codename == "" and opt.feature_type or common.codenames[opt.codename2].feature_type
 
-    local model_name1 = opt.use_local_model and pl.path.basename(opt1.input) or opt1.input
-    local model_name2 = opt.use_local_model and pl.path.basename(opt2.input) or opt2.input
+    local model_name1 = opt1.input
+    local model_name2 = opt2.input
 
     local model1 = torch.load(model_name1)
     local model2 = torch.load(model_name2)
