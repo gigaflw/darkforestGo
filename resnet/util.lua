@@ -1,14 +1,13 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-17 13:06:22
+-- @Last Modified time: 2017-12-17 16:44:08
 
 local pl = require 'pl.import_into'()
 
 require 'nn'
 if pl.path.exists("/dev/nvidiactl") then
     require 'cunn'
-    require 'cudnn'
 end
 
 local argcheck = require 'argcheck'
