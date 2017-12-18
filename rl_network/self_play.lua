@@ -71,7 +71,7 @@ function self_play.train_one_game(b, opt)
             end
         end
 
-        local x, y = rl_utils.play_with_cnn(b, b._next_player, opt.model.net)
+        local x, y = rl_utils.play_with_cnn(b, b._next_player, opt.model)
 
         --        print("!".."\t"..tostring(x).."\t"..tostring(y).. "\n")
 
@@ -111,7 +111,7 @@ function self_play.train_per_epoch(b, opt, epoch)
     local sgf_dataset = {}
 
     for batch = 1, opt.num_games_per_epoch do
-        print(string.format("Play game: %d/%d", batch, opt.num_games_per_epoch))
+        print(string.format("Train game: %d - %d/%d", epoch, batch, opt.num_games_per_epoch))
         board.clear(b)
         local res = self_play.train_one_game(b, opt)
 
@@ -150,25 +150,29 @@ function self_play.train_per_epoch(b, opt, epoch)
         collectgarbage()
     end
 
-    resnet_rl.train_on_the_fly(opt.model.net, sgf_dataset, string.format("rl%04d", epoch))
-
-    dp.free(def_policy)
-    om.free(ownermap)
+    resnet_rl.train_on_the_fly(opt.model, sgf_dataset, string.format("rl%04d", epoch))
 end
 
 function self_play.train(opt)
     local b = board.new()
 
     for epoch = 1, opt.num_epoches do
-        local old_model = pl.tablex.deepcopy(opt.model)
+        local old_model = opt.model:clone()
         self_play.train_per_epoch(b, opt, epoch)
 
         local play_opt, opt1, opt2 = rl_utils.train_play_init(old_model, opt.model,
-            string.format("resnet_rl%04d", epoch-1), string.format("resnet_rl%04d", epoch))
-        local b_win, w_win, differential = self_play.play(opt1, opt2, play_opt)
+            string.format("resnet_rl%04d", epoch - 1), string.format("resnet_rl%04d", epoch))
 
-        print(string.format('b_win = %d, w_win = %d, differential = %d', b_win, w_win, differential))
+        local old_win, new_win, differential = self_play.play(opt1, opt2, play_opt)
+
+        print(string.format('old_win = %d, new_win = %d, differential = %d', old_win, new_win, differential))
+
+        if differential > 0 then
+            opt.model = old_model
+        end
     end
+
+    self_play.free()
 end
 
 function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
@@ -198,7 +202,7 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
         local dcnn_opt = b._next_player == common.black and dcnn_opt1 or dcnn_opt2
         local x, y
         if string.sub(dcnn_opt.codename, 1, 6) == "resnet" then
-            x, y = rl_utils.play_with_cnn(b, b._next_player, dcnn_opt.model.net)
+            x, y = rl_utils.play_with_cnn(b, b._next_player, dcnn_opt.model)
         else
             x, y = dcnn_utils.sample(dcnn_opt, b, b._next_player)
         end
@@ -239,7 +243,7 @@ end
 
 function self_play.play(dcnn_opt1, dcnn_opt2, opt)
     local b = board.new()
-    local b_win, w_win, differential = 0, 0, 0
+    local win_1, win_2, differential = 0, 0, 0
 
     for batch = 1, opt.num_games do
         print(string.format("Play game: %d/%d", batch, opt.num_games))
@@ -256,15 +260,42 @@ function self_play.play(dcnn_opt1, dcnn_opt2, opt)
             local re
             if res.resign_side == common.white then
                 re = "B+Resign"
-                b_win = b_win + 1
-                differential = differential + 360
+                if batch % 2 == 1 then
+                    win_1 = win_1 + 1
+                    differential = differential + 360
+                else
+                    win_2 = win_2 + 1
+                    differential = differential - 360
+                end
             elseif res.resign_side == common.black then
                 re = "W+Resign"
-                w_win = w_win + 1
-                differential = differential - 360
+                if batch % 2 == 1 then
+                    win_2 = win_2 + 1
+                    differential = differential - 360
+                else
+                    win_1 = win_1 + 1
+                    differential = differential + 360
+                end
             else
-                re = res.score > 0 and string.format("B+%.1f", res.score) or string.format("W+%.1f", -res.score)
-                differential = differential + res.score
+                if res.score > 0 then
+                    re = string.format("B+%.1f", res.score)
+                    if batch % 2 == 1 then
+                        win_1 = win_1 + 1
+                        differential = differential + res.score
+                    else
+                        win_2 = win_2 + 1
+                        differential = differential - res.score
+                    end
+                else
+                    re = string.format("W+%.1f", -res.score)
+                    if batch % 2 == 1 then
+                        win_2 = win_2 + 1
+                        differential = differential + res.score
+                    else
+                        win_1 = win_1 + 1
+                        differential = differential - res.score
+                    end
+                end
             end
             local date = utils.get_current_date()
             local header = {
@@ -287,10 +318,12 @@ function self_play.play(dcnn_opt1, dcnn_opt2, opt)
         collectgarbage()
     end
 
+    return win_1, win_2, differential
+end
+
+function self_play.free()
     dp.free(def_policy)
     om.free(ownermap)
-
-    return b_win, w_win, differential
 end
 
 return self_play

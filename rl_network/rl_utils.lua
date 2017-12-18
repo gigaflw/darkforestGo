@@ -56,18 +56,20 @@ function rl_utils.play_with_cnn(b, player, net)
 
         -- pass move
         if index == 362 then
-            x, y = 0, 0
-            break
-        end
-
-        x, y = goutils.moveIdx2xy(index)
-
-        local check_res, comment = goutils.check_move(b, x, y, player)
-        if check_res then
-            break
-        else
+--            x, y = 0, 0
+--            break
             probs[index] = 0
             iter = iter + 1
+        else
+            x, y = goutils.moveIdx2xy(index)
+
+            local check_res, comment = goutils.check_move(b, x, y, player)
+            if check_res then
+                break
+            else
+                probs[index] = 0
+                iter = iter + 1
+            end
         end
     end
 
@@ -86,7 +88,7 @@ function rl_utils.rl_init(opt)
     opt.komi = 7.5
 
     opt.input = common.codenames[opt.model_name].model_name
-    opt.model = torch.load(opt.input)
+    opt.model = torch.load(opt.input).net
 
     return opt
 end
@@ -97,7 +99,7 @@ function rl_utils.train_play_init(old_model, new_model, old_model_name, new_mode
     opt.komi = 7.5
     opt.num_games = 2
     opt.sample_step = -1
-    opt.pipe_path = "../../dflog"
+    opt.pipe_path = "../dflog"
 
     local opt1, opt2 = pl.tablex.deepcopy(opt), pl.tablex.deepcopy(opt)
 
@@ -134,8 +136,8 @@ function rl_utils.play_init(opt)
     local model_name1 = opt1.input
     local model_name2 = opt2.input
 
-    local model1 = torch.load(model_name1)
-    local model2 = torch.load(model_name2)
+    local model1 = torch.load(model_name1).net
+    local model2 = torch.load(model_name2).net
 
     opt1.model, opt2.model = model1, model2
 

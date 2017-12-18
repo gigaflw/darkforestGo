@@ -21,3 +21,4 @@ local opt = pl.lapp[[
 local dcnn_opt1, dcnn_opt2 = rl_utils.play_init(opt)
 
 self_play.play(dcnn_opt1, dcnn_opt2, opt)
+self_play.free()
