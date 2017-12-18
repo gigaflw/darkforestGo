@@ -5,16 +5,13 @@
 
 package.path = package.path .. ';../?.lua'
 
+require("_torch_class_patch")
+
 local playoutv2 = require('mctsv2.playout_multithread')
 local common = require("common.common")
-local goutils = require 'utils.goutils'
+local utils = require("utils.utils")
 local board = require 'board.board'
-local utils = require 'utils.utils'
 local pl = require 'pl.import_into'()
-local self_play_mcts = require("rl_network.self_play_mcts")
-
-utils.require_torch()
-utils.require_cutorch()
 
 local opt = pl.lapp[[
     --rollout         (default 1000)           The number of rollout we use.
@@ -68,7 +65,22 @@ local opt = pl.lapp[[
     --save_sgf_per_move                               If so, then we save sgf file for each move
     --use_formal_params                               If so, then use formal parameters
     --use_custom_params                               If so, then use custom parameters
+
+    ** GPU Options  **
+    --use_gpu            (default true)     No use when there is no gpu devices
+    --device             (default 2)        which core to use on a multicore GPU environment
 ]]
+
+local util = require 'resnet.util'
+opt.use_gpu = opt.use_gpu and util.have_gpu() -- only use gpu when there is one
+
+if opt.use_gpu then
+    require 'cutorch'
+    cutorch.setDevice(opt.device)
+    print('use gpu device '..opt.device)
+end
+
+local self_play_mcts = require("rl_network.self_play_mcts")
 
 local callbacks = {}
 

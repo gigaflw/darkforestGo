@@ -6,7 +6,7 @@
 local pl = require 'pl.import_into'()
 
 local opt = pl.lapp[[
-  -g,--gpu  (default 3)                      GPU id to use.
+  -g,--gpu  (default 2)                      GPU id to use.
   --async                                    Make it asynchronized.
   --pipe_path (default "../../dflog")        Path for pipe file. Default is in the current directory, i.e., go/mcts
   --codename  (default "darkfores2")         Code name for the model to load.
