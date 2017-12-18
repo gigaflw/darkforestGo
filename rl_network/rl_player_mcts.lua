@@ -12,10 +12,8 @@ local om = require 'board.ownermap'
 local dp_simple = require('board.default_policy')
 local dp_pachi = require('pachi_tactics.moggy')
 local dp_v2 = require('board.pattern_v2')
-local opt_internal = require("rl_network.rl_cnn_evaluator_opt")
 local pl = require 'pl.import_into'()
 local class = require "class"
-
 local rl_player = class("RLPlayerMCTS")
 
 local def_policy = dp_pachi.new()
@@ -121,8 +119,8 @@ function rl_player:save_sgf(filename, opt, re)
         komi = self.val_komi,
         handi = self.val_handi,
         rule = self.rule,
-        player_b = opt_internal.codename,
-        player_w = opt_internal.codename,
+        player_b = opt_evaluator.codename,
+        player_w = opt_evaluator.codename,
         date = date,
         result = re
     }

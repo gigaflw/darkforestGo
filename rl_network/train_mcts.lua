@@ -224,6 +224,7 @@ end
 function callbacks.move_predictor(b, player)
     local prefix = prepare_prefix(opt)
     local m = playoutv2.play_rollout(tr, prefix, b)
+    io.stderr:write("move_predictor end")
     if prefix then io.stderr:write("Save tree to " .. prefix) end
     return m.x + 1, m.y + 1, m.win_rate
 end
