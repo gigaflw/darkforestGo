@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-17 16:44:08
+-- @Last Modified time: 2017-12-19 12:55:12
 
 local pl = require 'pl.import_into'()
 
@@ -146,6 +146,7 @@ local _old_board_to_features = argcheck{
 -----------------------
 -- API
 -----------------------
+local _input_buffer
 function util.play(model, board, player)
     local doc = [[
         Given model and board, let the model generate a play
@@ -153,14 +154,16 @@ function util.play(model, board, player)
         @param: model:
             a network given by `resnet.resnet.create_model' or `torch.load(<ckpt>).net`
         @param: board:
-            a `board.board` instance, will not modify the board
+            a `board.board` instances or an array of them, will not modify the board
         @param: player:
             `common.black` or `common.white`
+            if `board` is given as an array, this has also to be an array with same length
         @return: a table like this:
             { 1: < 362-d vector, a probability for all moves, sum to 1 >, 2: < -1~1, current player's winning rate > }
             where
                 vector[362] is the prob for pass
                 vector[idx] is the prob for goutils.moveIdx2xy(idx)
+            If an array of boards are given, an array of such table will be returned.
 
         demo:
             local net = torch.load('./resnet.ckpt/latest.params')
@@ -170,16 +173,21 @@ function util.play(model, board, player)
             ... -- do some plays
             out = play(net, board, common.black)
     ]]
-    -- local input = torch.CudaTensor(1, 17, 19, 19):zero()
-    -- for i = 1, 8 do
-    --     input[1][2*i-1] = CBoard.get_stones(board_history[i], player)
-    --     input[1][2*i] = CBoard.get_stones(board_history[i], CBoard.opponent(player))
-    -- end
-    -- input:narrow(2, 17, 1):fill(player == common.black and 1 or 0)
-    local input = util.board_to_features(board, player)
+    local tensor_type = model._type:find('Cuda') ~= nil and torch.CudaTensor or torch.FloatTensor
+    if type(board) ~= 'table' then board = {board}; player = {player} end
+    assert(#board == #player, "board and player sizes mismatch!")
 
-    -- TODO: This can be faster if we don't allocate a cuda tensor every time
-    local output = model:forward(input:resize(1, table.unpack((#input):totable())):cuda())
+    for i = 1, #board do
+        local input = util.board_to_features(board[i], player[i])
+
+        if _input_buffer == nil then
+            _input_buffer = tensor_type(#board, table.unpack((#input):totable()))
+        end
+
+        _input_buffer[i] = input
+    end
+
+    local output = model:forward(_input_buffer)
     output[1] = nn.SoftMax():forward(output[1]:float())
     return output
 end
