@@ -16,10 +16,6 @@ local pl = require 'pl.import_into'()
 local class = require "class"
 local rl_player = class("RLPlayerMCTS")
 
-local def_policy = dp_pachi.new()
-local ownermap = om.new()
-local moves = {}
-
 local function verify_player(b, player)
     if player ~= b._next_player then
         local supposed_player = (b._next_player == common.white and 'W' or 'B')
@@ -108,7 +104,7 @@ function rl_player:add_to_sgf_history(x, y, player)
 end
 
 -- Save the current history to sgf.
-function rl_player:save_sgf(filename, opt, re)
+function rl_player:save_sgf(filename, re, pb, pw)
     local f = io.open(filename, "w")
     if not f then
         return false, "file " .. filename .. " cannot be opened"
@@ -119,8 +115,8 @@ function rl_player:save_sgf(filename, opt, re)
         komi = self.val_komi,
         handi = self.val_handi,
         rule = self.rule,
-        player_b = opt_evaluator.codename,
-        player_w = opt_evaluator.codename,
+        player_b = pb,
+        player_w = pw,
         date = date,
         result = re
     }
@@ -133,7 +129,6 @@ end
 function rl_player:clear_board()
     board.clear(self.b)
     self.board_initialized = true
-    self.board_history = { }
     self.sgf_history = { }
 
     self.val_komi = 6.5
@@ -143,7 +138,7 @@ function rl_player:clear_board()
     return true
 end
 
-function rl_player:score(show_more)
+function rl_player:score()
     if self.val_komi == nil or self.val_handi == nil then
         return false, "komi or handi is not set!"
     end
@@ -157,24 +152,10 @@ function rl_player:score(show_more)
         function (b, max_depth) return self.dp.run(self.def_policy, b, max_depth, false) end
     )
 
-    local min_score = scores:min()
-    local max_score = scores:max()
+    local min_score, max_score = scores:min(), scores:max()
     local stones = om.get_territorylist(territory)
 
     io.stderr:write(string.format("Score (%s): %f, Playout min: %f, Playout max: %f, #dame: %d", self.opt.default_policy, score, min_score, max_score, #stones.dames));
-    if show_more then
-        -- Show the deadstone.
-        local dead_stones = om.get_deadlist(livedead)
-        local dead_stones_info = table.concat(dead_stones.b_str, " ") .. " " .. table.concat(dead_stones.w_str, " ")
-        io.stderr:write("Deadstones info:")
-        io.stderr:write(dead_stones_info)
-        om.show_deadstones(self.b, livedead)
-
-        io.stderr:write("Black prob:")
-        om.show_stones_prob(self.ownermap, common.black)
-        io.stderr:write("White prob:")
-        om.show_stones_prob(self.ownermap, common.white)
-    end
 
     if self.cbs.thread_switch then
         self.cbs.thread_switch("on")
@@ -182,25 +163,46 @@ function rl_player:score(show_more)
     return true, tostring(score), false, { score = score, min_score = min_score, max_score = max_score, num_dame = #stones.dames, livedead = livedead }
 end
 
+function rl_player:play(x, y, player)
+    if not self.board_initialized then error("Board should be initialized!!") end
+
+    if not verify_player(self.b, player) then
+        return false, "Invalid move!"
+    end
+
+    if x == nil then x, y = 0, 0 end
+
+    print(string.format("ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player))
+
+    if not board.play(self.b, x, y, player) then
+        io.stderr:write(string.format("Illegal move from the opponent! x = %d, y = %d, player = %d", x, y, player))
+        return false, "Invalid move"
+    end
+
+    self.cbs.move_receiver(x, y, player)
+    self.cbs.adjust_params_in_game(self.b)
+    self:add_to_sgf_history(x, y, player)
+
+    local move = goutils.compose_move_gtp(x, y)
+
+    if board.is_game_end(self.b) then
+        local _, _, _, scores = self:score()
+        return true, "resign", {
+            resign_side = 0,
+            score = scores.score,
+            min_score = scores.min_score,
+            max_score = scores.max_score
+        }
+    end
+
+    return true, move
+end
+
 function rl_player:g()
     return self:genmove(self.b._next_player)
 end
 
 function rl_player:genmove(player)
-
-    if not self.board_initialized then
-        return false, "Board should be initialized!!"
-    end
-    if player == nil then
-        return false, "Player should not be null"
-    end
-    if not verify_player(self.b, player) then
-        return false, "Invalid move!"
-    end
-
-    -- Save the history.
-    table.insert(self.board_history, board.copyfrom(self.b))
-
     -- Do not pass until after 140 ply.
     -- After that, if enemy pass then we pass.
     if self.b._ply >= 140 and goutils.coord_is_pass(self.b._last_move) then
@@ -222,7 +224,6 @@ function rl_player:genmove(player)
     end
 
     if self.opt.resign and self.b._ply >= 140 and self.b._ply % 20 == 1 then
-        io.stderr:write("Check whether we have screwed up...")
         local resign_thres = 10
         local _, _, _, scores = self:score()
         if (player == common.white and scores.min_score > resign_thres) or (player == common.black and scores.max_score < -resign_thres) then
@@ -247,7 +248,7 @@ function rl_player:genmove(player)
     end
 
     -- Call move predictor to get the move.
-    local xf, yf, win_rate = self.cbs.move_predictor(self.b, player)
+    local xf, yf, win_rate = self.cbs.move_predictor(self.b)
 
     if xf == nil then
         io.stderr:write("Warning! No move is valid!")
@@ -263,9 +264,7 @@ function rl_player:genmove(player)
     end
 
     self.cbs.adjust_params_in_game(self.b)
-
     self:add_to_sgf_history(xf, yf, player)
-
     self.win_rate = win_rate
 
     return true, move, win_rate

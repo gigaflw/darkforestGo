@@ -23,7 +23,7 @@ local opt = pl.lapp[[
 
     ** GPU Options  **
     --use_gpu            (default true)     No use when there is no gpu devices
-    --device             (default 2)        which core to use on a multicore GPU environment
+    --device             (default 1)        which core to use on a multicore GPU environment
 ]]
 
 opt_evaluator = opt
@@ -60,7 +60,7 @@ local model = torch.load(model_filename)
 print("Loading complete")
 
 -- Server side.
-local ex = C.ExLocalInit(opt.pipe_path, opt.device, common.TRUE)
+local ex = C.ExLocalInit(opt.pipe_path, opt.device - 1, common.TRUE)
 print("CNN Exchanger initialized.")
 print("Size of MBoard: " .. ffi.sizeof('MBoard'))
 print("Size of MMove: " .. ffi.sizeof('MMove'))

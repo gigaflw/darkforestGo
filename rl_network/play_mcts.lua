@@ -12,13 +12,19 @@ local common = require("common.common")
 local utils = require("utils.utils")
 local board = require 'board.board'
 local pl = require 'pl.import_into'()
+local self_play_mcts = require("rl_network.self_play_mcts")
+
+utils.require_torch()
+utils.require_cutorch()
 
 local opt = pl.lapp[[
-    --rollout         (default 1000)           The number of rollout we use.
+    --codename_mcts   (default "darkfores2")   Code name for models in mcts. If this is not empty then --input will be omitted.
+    --codename_normal (default "darkfores2")    Code name for models without mcts.
+    --rollout         (default 10)           The number of rollout we use.
     --dcnn_rollout    (default -1)           The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
     --dp_max_depth    (default 10000)        The max_depth of default policy.
     -v,--verbose      (default 1)            The verbose level (1 = critical, 2 = info, 3 = debug)
-    --num_games         (default 1)          The number of games to be played.
+    --num_games         (default 2)          The number of games to be played.
     --resign                                 Whether support resign in rl_training.
     --print_tree                             Whether print the search tree.
     --max_send_attempts (default 3)          #attempts to send to the server.
@@ -79,8 +85,6 @@ if opt.use_gpu then
     cutorch.setDevice(opt.device)
     print('use gpu device '..opt.device)
 end
-
-local self_play_mcts = require("rl_network.self_play_mcts")
 
 local callbacks = {}
 
@@ -201,6 +205,16 @@ function callbacks.quit_func()
     end
 end
 
+function callbacks.thread_switch(arg)
+    if arg == "on" then
+        playoutv2.thread_on(tr)
+    elseif arg == 'off' then
+        playoutv2.thread_off(tr)
+    else
+        io.stderr:write("Command " .. arg .. " is not recognized!")
+    end
+end
+
 function callbacks.move_predictor(b)
     local prefix = prepare_prefix(opt)
     local m = playoutv2.play_rollout(tr, prefix, b)
@@ -213,17 +227,21 @@ function callbacks.move_receiver(x, y, player)
     playoutv2.prune_xy(tr, x, y, player, prefix)
 end
 
-function callbacks.thread_switch(arg)
-    if arg == "on" then
-        playoutv2.thread_on(tr)
-    elseif arg == 'off' then
-        playoutv2.thread_off(tr)
-    else
-        io.stderr:write("Command " .. arg .. " is not recognized!")
-    end
-end
-
 local opt2 = {
+    sample_step = -1,
+    shuffle_top_n = 300,
+    rank = '9d',
+    handi = 0,
+    komi = 7.5,
+    userank = true,
+    attention = { 1, 1, common.board_size, common.board_size },
+
+    codename_mcts = opt.codename_mcts .. "_mcts",
+    codename = opt.codename_normal,
+    feature_type = common.codenames[opt.codename_normal].feature_type,
+    model = opt.codename_normal == "darkfores2" and torch.load(common.codenames[opt.codename_normal].model_name)
+            or torch.load(common.codenames[opt.codename_normal].model_name).net,
+
     rule = opt.rule,
     win_rate_thres = opt.win_rate_thres,
     exec = opt.exec,
@@ -232,9 +250,8 @@ local opt2 = {
     default_policy_pattern_file = opt.default_policy_pattern_file,
     default_policy_temperature = opt.default_policy_temperature,
     default_policy_sample_topn = opt.sample_topn,
-    save_sgf_per_move = opt.save_sgf_per_move,
     num_games = opt.num_games,
     resign = opt.resign
 }
 
-self_play_mcts.train(callbacks, opt2)
+self_play_mcts.play_mcts(callbacks, opt2)
