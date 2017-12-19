@@ -3,8 +3,6 @@
 -- Date: 2017/11/27
 --
 
-package.path = package.path .. ';../?.lua'
-
 require '_torch_class_patch'
 
 local playoutv2 = require 'mctsv2.playout_multithread'
@@ -14,48 +12,66 @@ local board = require 'board.board'
 local pl = require 'pl.import_into'()
 
 local opt = pl.lapp[[
-    --num_epoches          (default 2)       The number of batches in rl_training.
-    --num_games_per_epoch  (default 1)       The number of games to be played in an epoch.
+    ** Trainer Options **
+    --epoches            (default 10)        The number of batches in rl_training.
+    --epoch_per_ckpt     (default 1)
+    --game_per_epoch     (default 3)         The number of games to be played in an epoch.
     --resign                                 Whether support resign in rl_training.
     --sgf_save                               Whether save sgf file per game in rl_training.
-    --model_filename  (default 'resnet.ckpt/latest.cpu.params')     Filename for model
+    --log_file           (default 'log.txt')        If given, log will be saved
+    --ckpt_dir           (default './rl.ckpt')    Where to store the checkpoints
+    --ckpt_prefix        (default '')        Extra info to be prepended to checkpoint files
+    --model_filename     (default './resnet.ckpt/latest.cpu.params')        Filename for model
 
-    --rollout         (default 2)           The number of rollout we use.
-    --dcnn_rollout    (default -1)           The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
-    --dp_max_depth    (default 10000)        The max_depth of default policy.
-    -v,--verbose      (default 1)            The verbose level (1 = critical, 2 = info, 3 = debug)
-    --print_tree                             Whether print the search tree.
-    --max_send_attempts (default 3)          #attempts to send to the server.
-    --pipe_path         (default ".") Pipe path
-    --tier_name         (default "ai.go-evaluator") Tier name
-    --server_type       (default "local")    We can choose "local" or "cluster". For open source version, for now "cluster" is not usable.
-    --tree_to_json                           Whether we save the tree to json file for visualization. Note that pipe_path will be used.
-    --num_tree_thread   (default 16)         The number of threads used to expand MCTS tree.
-    --num_gpu           (default 1)          The number of gpus to use for local play.
-    --sigma             (default 0.05)       Sigma used to perturb the win rate in MCTS search.
-    --use_sigma_over_n                       use sigma / n (or sqrt(nparent/n)). This makes sigma small for nodes with confident win rate estimation.
-    --num_virtual_games (default 0)          Number of virtual games we use.
-    --acc_prob_thres    (default 0.8)        Accumulated probability threshold. We remove the remove if by the time we see it, the accumulated prob is greater than this thres.
-    --max_num_move      (default 20)          Maximum number of moves to consider in each tree node.
-    --min_num_move      (default 1)          Minimum number of moves to consider in each tree node.
-    --decision_mixture_ratio (default 5.0)   Mixture MCTS count ratio with cnn_confidence.
-    --time_limit        (default 1)        Limit time for each move in second. If set to 0, then there is no time limit.
-    --win_rate_thres    (default 0.0)        If the win rate is lower than that, resign.
-    --use_pondering                          Whether we use pondering
-    --exec              (default "")         Whether we run an initial script
-    --setup_board       (default "")         Setup board. The argument is "sgfname moveto"
-    --dynkomi_factor    (default 0.0)        Use dynkomi_factor
-    --num_playout_per_rollout (default 1)    Number of playouts per rollouts.
-    --single_move_return                     Use single move return (When we only have one choice, return the move immediately)
-    --expand_search_endgame                  Whether we expand the search in end game.
-    --default_policy    (default "v2")       The default policy used. Could be "simple", "v2".
+    ** GPU Options **
+    --use_gpu            (default true)     No use when there is no gpu devices
+    --device             (default 2)        which core to use on a multicore GPU environment
+
+    ** PlayoutV2 Options **
+    *** misc ***
+    -v,--verbose        (default 1)             The verbose level (1 = critical, 2 = info, 3 = debug)
+    --print_tree                                Whether print the search tree.
+    --tier_name         (default "ai.go-evaluator")     Tier name
+    --tree_to_json                              Whether we save the tree to json file for visualization. Note that pipe_path will be used.
+
+    *** cnn evaluator ***
+    --pipe_path         (default ".")           Pipe path
+    --server_type       (default "local")       We can choose "local" or "cluster". For open source version, for now "cluster" is not usable.
+    --max_send_attempts (default 3)             #attempts to send to the server.
+    
+    *** tree search ***
+    --num_tree_thread   (default 16)            The number of threads used to expand MCTS tree.
+    --rollout           (default 2)             How many games are played in one search
+    --dcnn_rollout      (default -1)            The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
+    
+    *** default policy **
+    --dp_max_depth      (default 10000)         The max_depth of default policy, ignored if patternv2 is used
+
+    --num_gpu           (default 1)             The number of gpus to use for local play.
+    --sigma             (default 0.05)          Sigma used to perturb the win rate in MCTS search.
+    --use_sigma_over_n                          use sigma / n (or sqrt(nparent/n)). This makes sigma small for nodes with confident win rate estimation.
+    --num_virtual_games (default 0)             Number of virtual games we use.
+    --acc_prob_thres    (default 0.8)           Accumulated probability threshold. We remove the remove if by the time we see it, the accumulated prob is greater than this thres.
+    --max_num_move      (default 20)            Maximum number of moves to consider in each tree node.
+    --min_num_move      (default 1)             Minimum number of moves to consider in each tree node.
+    --decision_mixture_ratio (default 5.0)      Mixture MCTS count ratio with cnn_confidence.
+    --time_limit        (default 1)             Limit time for each move in second. If set to 0, then there is no time limit.
+    --win_rate_thres    (default 0.0)           If the win rate is lower than that, resign.
+    --use_pondering                             Whether we use pondering
+    --exec              (default "")            Whether we run an initial script
+    --setup_board       (default "")            Setup board. The argument is "sgfname moveto"
+    --dynkomi_factor    (default 0.0)           Use dynkomi_factor
+    --num_playout_per_rollout (default 1)       Number of playouts per rollouts.
+    --single_move_return                        Use single move return (When we only have one choice, return the move immediately)
+    --expand_search_endgame                     Whether we expand the search in end game.
+    --default_policy    (default "v2")          The default policy used. Could be "simple", "v2".
     --default_policy_pattern_file (default "models/playout-model.bin") The patter file
     --default_policy_temperature  (default 0.125)   The temperature we use for sampling.
     --online_model_alpha         (default 0.0)      Whether we use online model and its alpha
     --online_prior_mixture_ratio (default 0.0)      Online prior mixture ratio.
-    --use_rave                               Whether we use RAVE.
-    --use_cnn_final_score                    Whether we use CNN final score.
-    --min_ply_to_use_cnn_final_score (default 100)     When to use cnn final score.
+    --use_rave                                      Whether we use RAVE.
+    --use_cnn_final_score                           Whether we use CNN final score.
+    --min_ply_to_use_cnn_final_score (default 100)    When to use cnn final score.
     --final_mixture_ratio            (default 0.5)    The mixture ratio we used.
     --percent_playout_in_expansion   (default 0)      The percent of threads that will run playout when we expand the node. Other threads will block wait.
     --use_old_uct                                     Use old uct
@@ -68,10 +84,6 @@ local opt = pl.lapp[[
     --min_rollout_peekable           (default 20000)  The command peek will return if the minimal number of rollouts exceed this threshold
     --use_formal_params                               If so, then use formal parameters
     --use_custom_params                               If so, then use custom parameters
-
-    ** GPU Options  **
-    --use_gpu            (default true)     No use when there is no gpu devices
-    --device             (default 2)        which core to use on a multicore GPU environment
 ]]
 
 local resnet_utils = require 'resnet.utils'
@@ -82,8 +94,6 @@ if opt.use_gpu then
     cutorch.setDevice(opt.device)
     print('use gpu device '..opt.device)
 end
-
-local self_play_mcts = require("rl_network.self_play_mcts")
 
 local tr
 local count = 0
@@ -244,6 +254,7 @@ function callbacks.thread_switch(arg)
     end
 end
 
-opt.model = torch.load(opt.model_filename).net
-
-self_play_mcts.train(callbacks, opt)
+local Trainer = require 'rl_network.trainer'
+local model = torch.load(opt.model_filename).net
+trainer = Trainer(mode, opt, callbacks)
+trainer:train(model, opt, callbacks)

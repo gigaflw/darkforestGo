@@ -6,7 +6,7 @@
 package.path = package.path .. ';../?.lua'
 
 local self_play = require 'rl_network.self_play'
-local rl_utils = require 'rl_network.util'
+local rl_utils = require 'rl_network.utils'
 local pl = require 'pl.import_into'()
 local utils = require 'utils.utils'
 

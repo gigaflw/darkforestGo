@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-19 19:08:30
+-- @Last Modified time: 2017-12-19 20:22:16
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -11,6 +11,7 @@ local pl = require 'pl.import_into'()
 local tnt = require 'torchnet'
 
 local Trainer = require 'resnet.trainer'
+local utils = require 'resnet.utils'
 local resnet = require 'resnet.resnet'
 local get_dataloader = require 'resnet.dataloader'
 
@@ -42,7 +43,7 @@ local default_opt = {
     epoch_per_test = 1,             -- The number of epochs per testing
 
     ---- GPU Options ----
-    use_gpu = util.have_gpu(),      -- No use when there is no gpu devices
+    use_gpu = utils.have_gpu(),      -- No use when there is no gpu devices
 
     ---- Network Options ----
     n_res = 2,                      -- The number of residual blocks in the resnet, 19 or 39 according to the thesis

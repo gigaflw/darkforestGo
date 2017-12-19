@@ -11,7 +11,7 @@ local dcnn_utils = require 'board.dcnn_utils'
 local sgf = require 'utils.sgf'
 local common = require 'common.common'
 local pl = require 'pl.import_into'()
-local rl_utils = require 'rl_network.util'
+local rl_utils = require 'rl_network.utils'
 local resnet_rl = require 'resnet.rl_train'
 
 local def_policy = dp.new()
