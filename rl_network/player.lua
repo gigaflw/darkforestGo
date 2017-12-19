@@ -263,9 +263,7 @@ function rl_player:genmove(player)
     end
 
     self.cbs.adjust_params_in_game(self.b)
-
     self:add_to_sgf_history(xf, yf, player)
-
     self.win_rate = win_rate
 
     return true, move, win_rate
