@@ -31,7 +31,7 @@ local default_opt = {
 
     ---- Training Options ----
     max_batches = 20,               -- -1 means each epoch will go through all data
-    epochs = 10,                   -- The number of epochs, where all data will trained once
+    epochs = 2,                   -- The number of epochs, where all data will trained once
     epoch_per_ckpt = 10,            -- The number of epochs per saving checkpoints
     ckpt_dir = './resnet.ckpt',     -- Where to store the checkpoints
     ckpt_prefix = '',               -- Extra info to be prepended to checkpoint files

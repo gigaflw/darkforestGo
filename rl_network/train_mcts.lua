@@ -14,15 +14,19 @@ local board = require 'board.board'
 local pl = require 'pl.import_into'()
 
 local opt = pl.lapp[[
-    --rollout         (default 1000)           The number of rollout we use.
+    --num_epoches          (default 2)       The number of batches in rl_training.
+    --num_games_per_epoch  (default 1)       The number of games to be played in an epoch.
+    --resign                                 Whether support resign in rl_training.
+    --sgf_save                               Whether save sgf file per game in rl_training.
+    --model_filename  (default 'resnet.ckpt/19/latest.params')     Filename for model
+
+    --rollout         (default 2)           The number of rollout we use.
     --dcnn_rollout    (default -1)           The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
     --dp_max_depth    (default 10000)        The max_depth of default policy.
     -v,--verbose      (default 1)            The verbose level (1 = critical, 2 = info, 3 = debug)
-    --num_games         (default 1)          The number of games to be played.
-    --resign                                 Whether support resign in rl_training.
     --print_tree                             Whether print the search tree.
     --max_send_attempts (default 3)          #attempts to send to the server.
-    --pipe_path         (default "../../dflog") Pipe path
+    --pipe_path         (default "../dflog") Pipe path
     --tier_name         (default "ai.go-evaluator") Tier name
     --server_type       (default "local")    We can choose "local" or "cluster". For open source version, for now "cluster" is not usable.
     --tree_to_json                           Whether we save the tree to json file for visualization. Note that pipe_path will be used.
@@ -45,7 +49,7 @@ local opt = pl.lapp[[
     --single_move_return                     Use single move return (When we only have one choice, return the move immediately)
     --expand_search_endgame                  Whether we expand the search in end game.
     --default_policy    (default "v2")       The default policy used. Could be "simple", "v2".
-    --default_policy_pattern_file (default "../models/playout-model.bin") The patter file
+    --default_policy_pattern_file (default "models/playout-model.bin") The patter file
     --default_policy_temperature  (default 0.125)   The temperature we use for sampling.
     --online_model_alpha         (default 0.0)      Whether we use online model and its alpha
     --online_prior_mixture_ratio (default 0.0)      Online prior mixture ratio.
@@ -62,7 +66,6 @@ local opt = pl.lapp[[
     --rule                           (default jp)     Use JP rule : jp, use CN rule: cn
     --heuristic_tm_total_time        (default 0)      Time for heuristic tm (0 mean you don't use it).
     --min_rollout_peekable           (default 20000)  The command peek will return if the minimal number of rollouts exceed this threshold
-    --save_sgf_per_move                               If so, then we save sgf file for each move
     --use_formal_params                               If so, then use formal parameters
     --use_custom_params                               If so, then use custom parameters
 
@@ -223,18 +226,6 @@ function callbacks.thread_switch(arg)
     end
 end
 
-local opt2 = {
-    rule = opt.rule,
-    win_rate_thres = opt.win_rate_thres,
-    exec = opt.exec,
-    setup_board = opt.setup_board,
-    default_policy = opt.default_policy,
-    default_policy_pattern_file = opt.default_policy_pattern_file,
-    default_policy_temperature = opt.default_policy_temperature,
-    default_policy_sample_topn = opt.sample_topn,
-    save_sgf_per_move = opt.save_sgf_per_move,
-    num_games = opt.num_games,
-    resign = opt.resign
-}
+opt.model = torch.load(opt.model_filename).net
 
-self_play_mcts.train(callbacks, opt2)
+self_play_mcts.train(callbacks, opt)

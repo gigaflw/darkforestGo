@@ -41,7 +41,6 @@ function rl_player:__init(callbacks, opt)
         default_policy_pattern_file = '../models/playout-model.bin',
         default_policy_temperature = 0.125,
         default_policy_sample_topn = -1,
-        save_sgf_per_move = false,
     }
 
     if opt then
@@ -98,13 +97,10 @@ end
 -- Write sgf
 function rl_player:add_to_sgf_history(x, y, player)
     table.insert(self.sgf_history, { x, y, player })
-    if self.opt.save_sgf_per_move then
-        self:save_sgf(string.format("game-%d.sgf", self.b._ply - 1))
-    end
 end
 
 -- Save the current history to sgf.
-function rl_player:save_sgf(filename, re, pb, pw)
+function rl_player:save_sgf(filename, re, pb, pw, is_save)
     local f = io.open(filename, "w")
     if not f then
         return false, "file " .. filename .. " cannot be opened"
@@ -120,10 +116,15 @@ function rl_player:save_sgf(filename, re, pb, pw)
         date = date,
         result = re
     }
-    f:write(sgfloader.sgf_string(header, self.sgf_history))
-    f:close()
-    io.stderr:write("Sgf " .. filename .. " saved.\n")
-    return true
+
+    local res = sgfloader.sgf_string(header, self.sgf_history)
+    if is_save then
+        f:write()
+        f:close()
+        io.stderr:write("Sgf " .. filename .. " saved.\n")
+    end
+
+    return res
 end
 
 function rl_player:clear_board()

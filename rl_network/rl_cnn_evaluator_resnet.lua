@@ -42,10 +42,13 @@ else
     opt.device = 1
 end
 
-
 local SIG_OK = tonumber(symbols.SIG_OK)
 local NUM_POSSIBLE_MOVES = 362  -- 19*19 + pass move
-local model_filename = 'resnet.ckpt/latest.cpu.params'
+local TIME_RELOAD = 5  -- (second) the interval to reload the model
+
+--local model_filename = 'resnet.ckpt/latest.cpu.params'
+local model_filename = 'resnet.ckpt/19/latest.params'
+local rl_model_name = 'resnet.ckpt/16/latest.params'  -- TODO: need to change the rl model name
 
 ---- Loading Model ----
 print("Loading model = " .. model_filename)
@@ -82,6 +85,7 @@ io.flush()
 utils.dbg_set()
 
 local boards = {}
+local last_update_time, current_time = common.wallclock(), nil
 
 -------------------
 --   Main Loop   --
@@ -89,6 +93,16 @@ local boards = {}
 while true do
     block_ids:zero()      -- block_ids[i] is the index for the i-th valid board received
     boards = {}
+
+    current_time = common.wallclock()
+    if current_time - last_update_time > TIME_RELOAD then
+        last_update_time = current_time
+        if io.open(rl_model_name, 'r') then
+            print("Reloading model = " .. rl_model_name)
+            model = torch.load(rl_model_name).net
+            print("Reloading complete")
+        end
+    end
 
     local num_valid = 0   -- we can receive `max_batch` boards simultaneously, but only `num_valid` of then are given
 
