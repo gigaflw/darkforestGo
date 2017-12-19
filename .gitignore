@@ -19,5 +19,5 @@ cmake-build-debug/
 .DS_Store
 
 # checkpoints
-resnet.ckpt/
+*.ckpt/
 resnet/show.lua
