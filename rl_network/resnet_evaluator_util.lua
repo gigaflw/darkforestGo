@@ -8,30 +8,30 @@
 --
 
 local ffi = require 'ffi'
-local utils = require('utils.utils')
+local utils = require 'utils.utils'
 local goutils = require 'utils.goutils'
 local board = require 'board.board'
-local common = require("common.common")
-local dp = require('board.default_policy')
+local common = require 'common.common'
+local dp = require 'board.default_policy'
 
 local symbols, s = utils.ffi_include(paths.concat(common.script_path(), "../common/package.h"))
 
-local num_first_move = tonumber(symbols.NUM_FIRST_MOVES)
-local move_normal = tonumber(symbols.MOVE_NORMAL)
-local move_simple_ko = tonumber(symbols.MOVE_SIMPLE_KO)
-local move_tactical = tonumber(symbols.MOVE_TACTICAL)
+local NUM_FIRST_MOVES = tonumber(symbols.NUM_FIRST_MOVES)
+local MOVE_NORMAL = tonumber(symbols.MOVE_NORMAL)
+local MOVE_SIMPLE_KO = tonumber(symbols.MOVE_SIMPLE_KO)
+local MOVE_TACTICAL = tonumber(symbols.MOVE_TACTICAL)
 
 local hostname = utils.get_hostname()
 
-local util_pkg = { }
+local util = { }
 
-function util_pkg.init(max_batch)
-    util_pkg.def_policy = dp.new()
+function util.init(max_batch)
+    util.def_policy = dp.new()
 
     local params = dp.new_params(true)
-    dp.set_params(util_pkg.def_policy, params)
+    dp.set_params(util.def_policy, params)
 
-    util_pkg.t_received = { }
+    util.t_received = { }
 
     local boards = ffi.new("MBoard*[?]", max_batch)
     local moves = ffi.new("MMove*[?]", max_batch)
@@ -45,91 +45,110 @@ function util_pkg.init(max_batch)
         table.insert(anchor, m)
         moves[i-1] = m
     end
-    util_pkg.anchor = anchor
+    util.anchor = anchor
 
     -- These two are open interface so that other could use. 
-    util_pkg.boards = boards
-    util_pkg.moves = moves
+    util.boards = boards
+    util.moves = moves
 end
 
-function util_pkg.prepare_move(k, sort_prob, sort_index)
+function util.prepare_move(ind, sort_prob, sort_index, use_dp)
+    local doc = [[
+        set moves[ind] so that it is prepared to be sent back
+        @params: sort_prob:
+            Tensor, sorted probability given by neuron network
+        @params: sort_index:
+            Tensor, corresponding move index
+        @params: use_dp:
+            Whether considere the tactical moves computed by default policy.
+
+        e.g.
+            sort_prob = [0.8, 0.1, ...., 0]
+            sort_index = [4, 1, ...., 0]
+            this means the neuron network predict the position `4` to be the best move with probability 0.8
+
+        Following moves will be considered:
+            * All moves computed from default policy, with prob 0.01, if use_dp = true
+            * The top k moves selected given by neuron network
+            the number of moves is bounded by NUM_FIRST_MOVES
+    ]]
+
     utils.dprint("Start sending move")
 
-    local mmove = util_pkg.moves[k - 1]
+    local mmove = util.moves[ind - 1]
     -- Note that unlike in receive_move, k is no longer batch_idx, since we skip a batch slot if it does not see a board situation.
-    local mboard = util_pkg.boards[k - 1]
+    local mboard = util.boards[ind - 1]
     local player = mboard.board._next_player
 
     mmove.t_sent = mboard.t_sent
-    mmove.t_received = util_pkg.t_received[k]
+    mmove.t_received = util.t_received[ind]
     mmove.t_replied = common.wallclock()
     mmove.hostname = hostname
     mmove.player = player
     mmove.b = mboard.b
     mmove.seq = mboard.seq
-    utils.dprint("Send b = %x, seq = %d, k = %d", tonumber(mmove.b), tonumber(mmove.seq), k)
+    utils.dprint("Send b = %x, seq = %d, ind = %d", tonumber(mmove.b), tonumber(mmove.seq), ind)
     mmove.has_score = common.FALSE
 
-    --
+    local good_move_cnt = 0
+
     -- Deal with tactical moves if there are any.
     -- Index i keeps the location where the next move is added to the list.
-    local i = 0
-    utils.dprint("Add tactical moves")
-    local tactical_moves = dp.get_candidate_moves(util_pkg.def_policy, mboard.board)
+    if use_dp then
+        utils.dprint("Add tactical moves")
+        local tactical_moves = dp.get_candidate_moves(util.def_policy, mboard.board)
 
-    for l = 1, #tactical_moves do
-        local x = tactical_moves[l][1]
-        local y = tactical_moves[l][2]
-        mmove.xs[i] = x
-        mmove.ys[i] = y
-        -- Make the confidence small but not zero.
-        mmove.probs[i] = 0.01
-        mmove.types[i] = move_tactical
-        utils.dprint("   Move (%d, %d), move = %s, type = Tactical move", x, y, goutils.compose_move_gtp(x, y, tonumber(mmove.player)))
-        i = i + 1
+        for _, move in pairs(tactical_moves) do
+            local x, y = move[1], move[2]
+            mmove.xs[good_move_cnt], mmove.ys[good_move_cnt] = x, y
+            mmove.probs[good_move_cnt] = 0.01 -- Make the confidence small but not zero.
+            mmove.types[good_move_cnt] = MOVE_TACTICAL
+            utils.dprint("   Move (%d, %d), move = %s, type = Tactical move",
+                x, y, goutils.compose_move_gtp(x, y, tonumber(mmove.player)))
+            good_move_cnt = good_move_cnt + 1
+        end
     end
 
     -- Check if each move is valid or not, if not, go to the next move.
-    -- Index j is the next move to be read from CNN.
+    -- Index i is the next move to be read from CNN.
     utils.dprint("Add CNN moves")
-    local j = 1
-    while i < num_first_move and j <= common.board_size * common.board_size do
-        local x, y = goutils.moveIdx2xy(sort_index[j])
+    for i = 1, 361 do
+        if good_move_cnt >= NUM_FIRST_MOVES then break end
+
+        local move_idx, prob = sort_index[i], sort_prob[i]
+        local x, y = goutils.moveIdx2xy(move_idx)
         local check_res, comments = goutils.check_move(mboard.board, x, y, player)
+
         if check_res then
             -- The move is all right.
-            mmove.xs[i] = x
-            mmove.ys[i] = y
-            mmove.probs[i] = sort_prob[j]
-            if board.is_move_giving_simple_ko(mboard.board, x, y, player) then
-               mmove.types[i] = move_simple_ko
-            else
-               mmove.types[i] = move_normal
-            end
-            utils.dprint("   Move (%d, %d), ind = %d, move = %s, conf = (%f), type = %s",
-                x, y, sort_index[j], goutils.compose_move_gtp(x, y, tonumber(mmove.player)), sort_prob[j], mmove.types[i] == move_simple_ko and "Simple KO move" or "Normal Move")
+            mmove.xs[good_move_cnt] = x
+            mmove.ys[good_move_cnt] = y
+            mmove.probs[good_move_cnt] = prob
+            mmove.types[good_move_cnt] = board.is_move_giving_simple_ko(mboard.board, x, y, player) and MOVE_SIMPLE_KO or MOVE_NORMAL
+            good_move_cnt = good_move_cnt + 1
 
-            i = i + 1
+            utils.dprint("   Move (%d, %d), ind = %d, move = %s, conf = (%f), type = %s",
+                x, y, move_idx, goutils.compose_move_gtp(x, y, tonumber(mmove.player)), prob, mmove.types[i] == MOVE_SIMPLE_KO and "Simple KO move" or "Normal Move")
         else
             utils.dprint("   Skipped Move (%d, %d), ind = %d, move = %s, conf = (%f), Reason = %s",
-                x, y, sort_index[j], goutils.compose_move_gtp(x, y, tonumber(player)), sort_prob[j], comments)
+                x, y, move_idx, goutils.compose_move_gtp(x, y, tonumber(player)), prob, comments)
         end
-        j = j + 1
     end
+
     -- Put zeros if there is not enough move.
     utils.dprint("Zero padding moves")
-    while i < num_first_move do
+    for i = good_move_cnt, NUM_FIRST_MOVES - 1 do
         mmove.xs[i] = 0
         mmove.ys[i] = 0
         mmove.probs[i] = 0
-        i = i + 1
     end
+
     return mmove
 end
 
 local gc_count = 0
 local gc_interval = 50
-function util_pkg.sparse_gc()
+function util.sparse_gc()
     gc_count = gc_count + 1
     if gc_count == gc_interval then
         collectgarbage()
@@ -137,8 +156,8 @@ function util_pkg.sparse_gc()
     end
 end
 
-function util_pkg.free()
-    dp.free(util_pkg.def_policy)
+function util.free()
+    dp.free(util.def_policy)
 end
 
-return util_pkg
+return util
