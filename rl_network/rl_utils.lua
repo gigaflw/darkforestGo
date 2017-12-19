@@ -136,8 +136,8 @@ function rl_utils.play_init(opt)
     local model_name1 = opt1.input
     local model_name2 = opt2.input
 
-    local model1 = torch.load(model_name1).net
-    local model2 = torch.load(model_name2).net
+    local model1 = opt1.codename == "darkfores2" and torch.load(model_name1) or torch.load(model_name1).net
+    local model2 = opt2.codename == "darkfores2" and torch.load(model_name2) or torch.load(model_name2).net
 
     opt1.model, opt2.model = model1, model2
 

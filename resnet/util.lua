@@ -10,6 +10,8 @@ if pl.path.exists("/dev/nvidiactl") then
     require 'cunn'
 end
 
+torch.setdefaulttensortype('torch.FloatTensor')
+
 local argcheck = require 'argcheck'
 local CBoard = require 'board.board'
 local common = require 'common.common'
