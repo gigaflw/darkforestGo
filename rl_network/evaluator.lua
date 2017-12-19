@@ -64,15 +64,15 @@ board.print_info()
 
 ---- reuseable tensors ---
 local block_ids = torch.DoubleTensor(opt.max_batch)
-local sorted_prob = torch.FloatTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
-local sorted_index = torch.FloatTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
-local pre_probs, pre_probs_sorted_v, pre_probs_sorted_k
+local pre_probs, pre_values, pre_probs_sorted_v, pre_probs_sorted_k
 if opt.use_gpu then
     pre_probs = torch.CudaTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+    pre_values = torch.CudaTensor(opt.max_batch)
     pre_probs_sorted_v = torch.CudaTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
     pre_probs_sorted_k = torch.CudaLongTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
 else
     pre_probs = torch.FloatTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+    pre_values = torch.FloatTensor(opt.max_batch)
     pre_probs_sorted_v = torch.FloatTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
     pre_probs_sorted_k = torch.LongTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
 end
@@ -120,28 +120,26 @@ while true do
         local start = common.wallclock()
 
         local probs = pre_probs:sub(1, num_valid)
+        local values = pre_values:sub(1, num_valid)
         local probs_sorted_v = pre_probs_sorted_v:sub(1, num_valid)
         local probs_sorted_k = pre_probs_sorted_k:sub(1, num_valid)
 
         for i = 1, num_valid do
             local output = resnet_utils.play(model, boards[i], boards[i]._next_player, true) -- true means no pass
-            local policy = output[1]  -- a 362-d probability distribution
 
-            probs[i] = policy
+            probs[i] = output[1]  -- a 362-d probability distribution
+            values[i] = output[2] * 361 -- a float in [-1, 1], output of value network
             pkg.t_received[block_ids[i]] = common.wallclock()
         end
 
         -- find the top k moves
         torch.sort(probs_sorted_v, probs_sorted_k, probs, 2, true)
 
-        sorted_prob:sub(1, num_valid):copy(probs_sorted_v)
-        sorted_index:sub(1, num_valid):copy(probs_sorted_k)
-
         print(string.format("Computation = %f", common.wallclock() - start))
 
         local start = common.wallclock()
         for i = 1, num_valid do
-            local mmove = pkg.prepare_move(block_ids[i], sorted_prob[i], sorted_index[i])
+            local mmove = pkg.prepare_move(block_ids[i], probs_sorted_v[i], probs_sorted_k[i], values[i], opt.use_dp)
             C.ExLocalServerSendMove(exchanger, mmove)
         end
         print(string.format("Send back = %f", common.wallclock() - start))

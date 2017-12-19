@@ -52,15 +52,17 @@ function util.init(max_batch)
     util.moves = moves
 end
 
-function util.prepare_move(ind, sort_prob, sort_index, use_dp)
+function util.prepare_move(ind, sort_prob, sort_index, value, use_dp)
     local doc = [[
         set moves[ind] so that it is prepared to be sent back
         @params: sort_prob:
             Tensor, sorted probability given by neuron network
         @params: sort_index:
             Tensor, corresponding move index
+        @params: values:
+            The output of value network, a float between [-361, 361]
         @params: use_dp:
-            Whether considere the tactical moves computed by default policy.
+            Whether consider the tactical moves computed by default policy.
 
         e.g.
             sort_prob = [0.8, 0.1, ...., 0]
@@ -88,7 +90,8 @@ function util.prepare_move(ind, sort_prob, sort_index, use_dp)
     mmove.b = mboard.b
     mmove.seq = mboard.seq
     utils.dprint("Send b = %x, seq = %d, ind = %d", tonumber(mmove.b), tonumber(mmove.seq), ind)
-    mmove.has_score = common.FALSE
+    mmove.has_score = common.TRUE
+    mmove.score = value
 
     local good_move_cnt = 0
 
