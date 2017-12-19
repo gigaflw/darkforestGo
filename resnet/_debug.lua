@@ -1,4 +1,4 @@
-util = require 'resnet.util'
+util = require 'resnet.utils'
 sgf = require 'utils.sgf'
 goutil = require 'utils.goutils'
 tnt = require 'torchnet'

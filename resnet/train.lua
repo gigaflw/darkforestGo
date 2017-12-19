@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-17 13:11:58
+-- @Last Modified time: 2017-12-19 19:08:05
 
 local doc = [[
     The following script should always be the entrance of the training procedure
@@ -50,7 +50,7 @@ local opt = pl.lapp[[
     --momentum          (default 0.9)
 ]]
 
-local util = require 'resnet.util'
+local util = require 'resnet.utils'
 opt.use_gpu = opt.use_gpu and util.have_gpu() -- only use gpu when there is one
 
 if opt.use_gpu then

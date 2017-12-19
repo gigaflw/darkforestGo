@@ -2,17 +2,17 @@
 -- Date: 2017/11/11
 --
 
-local utils = require("utils.utils")
+local utils = require 'utils.utils'
 
-local board = require("board.board")
-local om = require("board.ownermap")
-local dp = require("pachi_tactics.moggy")
-local dcnn_utils = require("board.dcnn_utils")
-local sgf = require("utils.sgf")
-local common = require("common.common")
-local rl_utils = require("rl_network.rl_utils")
+local board = require 'board.board'
+local om = require 'board.ownermap'
+local dp = require 'pachi_tactics.moggy'
+local dcnn_utils = require 'board.dcnn_utils'
+local sgf = require 'utils.sgf'
+local common = require 'common.common'
 local pl = require 'pl.import_into'()
-local resnet_rl = require("resnet.rl_train")
+local rl_utils = require 'rl_network.util'
+local resnet_rl = require 'resnet.rl_train'
 
 local def_policy = dp.new()
 local ownermap = om.new()

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-16 10:07:58
+-- @Last Modified time: 2017-12-19 19:08:37
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -9,7 +9,7 @@ local goutils = require 'utils.goutils'
 local common = require 'common.common'
 local CBoard = require 'board.board'
 local argcheck = require 'argcheck'
-local resnet_util = require 'resnet.util'
+local resnet_utils = require 'resnet.utils'
 
 local parse_and_put = argcheck{
     doc = [[
@@ -38,7 +38,7 @@ local parse_and_put = argcheck{
         assert(moveIdx > 0 and moveIdx <= 19 * 19 + 1)
 
         local winner = game:get_result_enum()
-        local s = resnet_util.board_to_features(board, player)
+        local s = resnet_utils.board_to_features(board, player)
         local a = moveIdx
         local z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
 

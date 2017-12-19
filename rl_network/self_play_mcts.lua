@@ -11,6 +11,7 @@ local rl_utils = require("rl_network.rl_utils")
 local resnet_rl = require("resnet.rl_train")
 local self_play = require("rl_network.self_play")
 
+
 local self_play_mcts = {}
 local rl_player
 

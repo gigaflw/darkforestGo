@@ -5,11 +5,11 @@
 
 package.path = package.path .. ';../?.lua'
 
-require("_torch_class_patch")
+require '_torch_class_patch'
 
-local playoutv2 = require('mctsv2.playout_multithread')
-local common = require("common.common")
-local utils = require("utils.utils")
+local playoutv2 = require 'mctsv2.playout_multithread'
+local common = require 'common.common'
+local utils = require 'utils.utils'
 local board = require 'board.board'
 local pl = require 'pl.import_into'()
 
@@ -18,7 +18,7 @@ local opt = pl.lapp[[
     --num_games_per_epoch  (default 1)       The number of games to be played in an epoch.
     --resign                                 Whether support resign in rl_training.
     --sgf_save                               Whether save sgf file per game in rl_training.
-    --model_filename  (default 'resnet.ckpt/19/latest.params')     Filename for model
+    --model_filename  (default 'resnet.ckpt/latest.cpu.params')     Filename for model
 
     --rollout         (default 2)           The number of rollout we use.
     --dcnn_rollout    (default -1)           The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
@@ -26,7 +26,7 @@ local opt = pl.lapp[[
     -v,--verbose      (default 1)            The verbose level (1 = critical, 2 = info, 3 = debug)
     --print_tree                             Whether print the search tree.
     --max_send_attempts (default 3)          #attempts to send to the server.
-    --pipe_path         (default "../dflog") Pipe path
+    --pipe_path         (default ".") Pipe path
     --tier_name         (default "ai.go-evaluator") Tier name
     --server_type       (default "local")    We can choose "local" or "cluster". For open source version, for now "cluster" is not usable.
     --tree_to_json                           Whether we save the tree to json file for visualization. Note that pipe_path will be used.
@@ -74,8 +74,8 @@ local opt = pl.lapp[[
     --device             (default 2)        which core to use on a multicore GPU environment
 ]]
 
-local util = require 'resnet.util'
-opt.use_gpu = opt.use_gpu and util.have_gpu() -- only use gpu when there is one
+local resnet_utils = require 'resnet.utils'
+opt.use_gpu = opt.use_gpu and resnet_utils.have_gpu() -- only use gpu when there is one
 
 if opt.use_gpu then
     require 'cutorch'
@@ -84,8 +84,6 @@ if opt.use_gpu then
 end
 
 local self_play_mcts = require("rl_network.self_play_mcts")
-
-local callbacks = {}
 
 local tr
 local count = 0
@@ -153,6 +151,26 @@ local function set_playout_params_from_opt()
     playoutv2.tree_params.use_old_uct = opt.use_old_uct and common.TRUE or common.FALSE
     playoutv2.tree_params.use_sigma_over_n = opt.use_sigma_over_n and common.TRUE or common.FALSE
     playoutv2.tree_params.num_playout_per_rollout = opt.num_playout_per_rollout
+end
+
+-----------------
+--  Callbacks  --
+-----------------
+local callbacks = {}
+function callbacks.set_komi(komi, handi)
+    if komi ~= nil then
+        playoutv2.set_params(tr, { komi = komi })
+    end
+    -- for large handi game, cnn need to give more candidate, so mcts could possibly be more aggressive
+    local changed_params
+    if handi and handi <= -5 then
+        changed_params = { dynkomi_factor=1.0 }
+    end
+    if changed_params then
+        if playoutv2.set_params(tr, changed_params) then
+            playoutv2.print_params(tr)
+        end
+    end
 end
 
 function callbacks.adjust_params_in_game(b, isCanada)

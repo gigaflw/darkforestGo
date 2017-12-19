@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-17 17:29:10
+-- @Last Modified time: 2017-12-19 19:08:30
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -10,7 +10,6 @@ local doc = [[
 local pl = require 'pl.import_into'()
 local tnt = require 'torchnet'
 
-local util = require 'resnet.util'
 local Trainer = require 'resnet.trainer'
 local resnet = require 'resnet.resnet'
 local get_dataloader = require 'resnet.dataloader'

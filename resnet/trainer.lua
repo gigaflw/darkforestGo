@@ -1,12 +1,11 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-16 10:01:29
+-- @Last Modified time: 2017-12-19 19:07:53
 
 local lfs = require 'lfs'
 local class = require 'class'
 local Trainer = class('resnet.Trainer')
-local resnet_util = require 'resnet.util'
 
 local default_opt = {
     batch_size = 24,
