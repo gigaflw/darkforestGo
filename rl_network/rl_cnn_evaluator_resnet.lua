@@ -23,7 +23,7 @@ local evaluator_util = require 'rl_network.resnet_evaluator_util'
 
 local opt = pl.lapp[[
     --pipe_path     (default ".")
-    --num_attempt   (default 10)                 number of attempt before wait_board gave up and return nil.
+    --num_attempt   (default 10)            Number of attempt before wait_board gave up and return nil.
     --max_batch     (default 32)
     --use_dp        (default false)         Whether add to candidate move with default policy
 
@@ -111,7 +111,7 @@ while true do
         local probs_sorted_k = pre_probs_sorted_k:sub(1, num_valid)
 
         for i = 1, num_valid do
-            local output = resnet_util.play(model, boards[i], boards[i]._next_player)
+            local output = resnet_util.play(model, boards[i], boards[i]._next_player, true) -- true means no pass
             local policy = output[1]  -- a 362-d probability distribution
 
             probs[i] = policy

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-19 12:55:12
+-- @Last Modified time: 2017-12-19 14:11:08
 
 local pl = require 'pl.import_into'()
 
@@ -147,23 +147,26 @@ local _old_board_to_features = argcheck{
 -- API
 -----------------------
 local _input_buffer
-function util.play(model, board, player)
+function util.play(model, board, player, no_pass)
     local doc = [[
         Given model and board, let the model generate a play
 
         @param: model:
             a network given by `resnet.resnet.create_model' or `torch.load(<ckpt>).net`
         @param: board:
-            a `board.board` instances or an array of them, will not modify the board
+            a `board.board` instances
         @param: player:
             `common.black` or `common.white`
-            if `board` is given as an array, this has also to be an array with same length
+        @param: no_pass:
+            boolean, false by default,
+            If given, the porbability for pass move will be set to zero.
+            The probabilities still sum to 1, though.
+
         @return: a table like this:
             { 1: < 362-d vector, a probability for all moves, sum to 1 >, 2: < -1~1, current player's winning rate > }
             where
                 vector[362] is the prob for pass
                 vector[idx] is the prob for goutils.moveIdx2xy(idx)
-            If an array of boards are given, an array of such table will be returned.
 
         demo:
             local net = torch.load('./resnet.ckpt/latest.params')
@@ -174,21 +177,22 @@ function util.play(model, board, player)
             out = play(net, board, common.black)
     ]]
     local tensor_type = model._type:find('Cuda') ~= nil and torch.CudaTensor or torch.FloatTensor
-    if type(board) ~= 'table' then board = {board}; player = {player} end
-    assert(#board == #player, "board and player sizes mismatch!")
 
-    for i = 1, #board do
-        local input = util.board_to_features(board[i], player[i])
+    local input = util.board_to_features(board, player)
 
-        if _input_buffer == nil then
-            _input_buffer = tensor_type(#board, table.unpack((#input):totable()))
-        end
-
-        _input_buffer[i] = input
+    if _input_buffer == nil then
+        _input_buffer = tensor_type(1, table.unpack((#input):totable()))
     end
+
+    _input_buffer[1] = input
 
     local output = model:forward(_input_buffer)
     output[1] = nn.SoftMax():forward(output[1]:float())
+
+    if no_pass then
+        output[1][362] = 0
+        output[1]:div(output[1]:sum())
+    end
     return output
 end
 
