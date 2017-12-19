@@ -1,81 +1,82 @@
 --
 -- Created by HgS_1217_
 -- Date: 2017/11/27
+-- Last Modified by:   gigaflw
+-- Last Modified time: 2017-12-16 10:07:58
 --
 
-package.path = package.path .. ';../?.lua'
+require '_torch_class_patch'
 
-require("_torch_class_patch")
-
-local utils = require('utils.utils')
-local ffi = require 'ffi'
-local common = require("common.common")
-local board = require('board.board')
-local evaluator_util = require 'rl_network.resnet_evaluator_util'
-local threads = require 'threads'
-local util = require 'resnet.util'
 local pl = require 'pl.import_into'()
-local resnet_util = require("resnet.util")
+local ffi = require 'ffi'
+local threads = require 'threads'
+threads.serialization('threads.sharedserialize')
+
+local common = require 'common.common'
+local utils = require 'utils.utils'
+local symbols, _ = utils.ffi_include(paths.concat(common.script_path(), "../local_evaluator/cnn_local_exchanger.h"))
+local C = ffi.load(paths.concat(common.script_path(), "../libs/liblocalexchanger.so"))
+
+local board = require 'board.board'
+local evaluator_util = require 'rl_network.resnet_evaluator_util'
+local resnet_util = require 'resnet.util'
 
 local opt = pl.lapp[[
-    --async                                    Make it asynchronized.
-    --pipe_path (default "../../dflog")        Path for pipe file. Default is in the current directory, i.e., go/mcts
-    --codename  (default "resnet_16")         Code name for the model to load.
+    --pipe_path     (default ".")
+    --num_attempt   (default 10)                 number of attempt before wait_board gave up and return nil.
+    --max_batch     (default 32)
 
     ** GPU Options  **
     -g,--gpu             (default 1)        which core to use on a multicore GPU environment
     --use_gpu            (default true)     No use when there is no gpu devices
 ]]
 
-opt_evaluator = opt
-
-opt.use_gpu = opt.use_gpu and util.have_gpu() -- only use gpu when there is one
-
+opt.use_gpu = opt.use_gpu and resnet_util.have_gpu() -- only use gpu when there is one
 if opt.use_gpu then
     require 'cutorch'
     cutorch.setDevice(opt.gpu)
     print('use gpu device '..opt.gpu)
 end
 
-threads.serialization('threads.sharedserialize')
 
-local symbols, s = utils.ffi_include("../local_evaluator/cnn_local_exchanger.h")
-local C = ffi.load("../libs/liblocalexchanger.so")
+local SIG_OK = tonumber(symbols.SIG_OK)
+local NUM_POSSIBLE_MOVES = 362  -- 19*19 + pass move
+local model_filename = 'resnet.ckpt/latest.cpu.params'
 
-local sig_ok = tonumber(symbols.SIG_OK)
-
--- number of attempt before wait_board gave up and return nil.
--- previously this number is indefinite, i.e., wait until there is a package (which might cause deadlock).
-local num_attempt = 10
-
-local total_index_length = 362
-local max_batch = opt.async and 128 or 32
-local model_filename = common.codenames[opt.codename].model_name
-
+---- Loading Model ----
 print("Loading model = " .. model_filename)
 local model = torch.load(model_filename).net
 print("Loading complete")
 
--- Server side.
+---- Init Pipe File ----
+
 local ex = C.ExLocalInit(opt.pipe_path, opt.gpu - 1, common.TRUE)
 print("CNN Exchanger initialized.")
 print("Size of MBoard: " .. ffi.sizeof('MBoard'))
 print("Size of MMove: " .. ffi.sizeof('MMove'))
 board.print_info()
 
-local block_ids = torch.DoubleTensor(max_batch)
-local sorted_prob = torch.FloatTensor(max_batch, common.board_size * common.board_size + 1)
-local sorted_index = torch.FloatTensor(max_batch, common.board_size * common.board_size + 1)
+---- reuseable tensors ---
+local block_ids = torch.DoubleTensor(opt.max_batch)
+local sorted_prob = torch.FloatTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+local sorted_index = torch.FloatTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+local probs_cuda, sorted_prob_cuda, sorted_index_cuda
+if opt.use_gpu then
+    probs_cuda = torch.CudaTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+    sorted_prob_cuda = torch.CudaTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+    sorted_index_cuda = torch.CudaLongTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+else
+    probs_cuda = torch.FloatTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+    sorted_prob_cuda = torch.FloatTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+    sorted_index_cuda = torch.LongTensor(opt.max_batch, NUM_POSSIBLE_MOVES)
+end
 
-evaluator_util.init(max_batch)
+evaluator_util.init(opt.max_batch)
 
 print("ready")
 io.flush()
 
--- Preallocate the cuda tensors.
-local probs_cuda, sorted_prob_cuda, sorted_index_cuda
-local boards
-
+local boards = {}
 while true do
     -- Get data
     block_ids:zero()
@@ -83,15 +84,10 @@ while true do
 
     local num_valid = 0
 
-    for i = 1, max_batch do
+    for i = 1, opt.max_batch do
         local mboard = evaluator_util.boards[i - 1]
-        local ret = C.ExLocalServerGetBoard(ex, mboard, num_attempt)
-        if ret == sig_ok and mboard.seq ~= 0 and mboard.b ~= 0 then
-            if probs_cuda == nil then
-                probs_cuda = torch.CudaTensor(max_batch, total_index_length)
-                sorted_prob_cuda = torch.CudaTensor(max_batch, total_index_length)
-                sorted_index_cuda = torch.CudaLongTensor(max_batch, total_index_length)
-            end
+        local ret = C.ExLocalServerGetBoard(ex, mboard, opt.num_attempt)
+        if ret == SIG_OK and mboard.seq ~= 0 and mboard.b ~= 0 then
             num_valid = num_valid + 1
             boards[num_valid] = mboard.board
             block_ids[num_valid] = i
@@ -99,7 +95,7 @@ while true do
     end
 
     if C.ExLocalServerIsRestarting(ex) == common.FALSE and probs_cuda ~= nil and num_valid > 0 then
-        print(string.format("Valid sample = %d / %d", num_valid, max_batch))
+        print(string.format("Valid sample = %d / %d", num_valid, opt.max_batch))
         local start = common.wallclock()
 
         local probs_cuda_part = probs_cuda:sub(1, num_valid)

@@ -14,7 +14,7 @@ local board = require 'board.board'
 local common = require("common.common")
 local dp = require('board.default_policy')
 
-local symbols, s = utils.ffi_include("../common/package.h")
+local symbols, s = utils.ffi_include(paths.concat(common.script_path(), "../common/package.h"))
 
 local num_first_move = tonumber(symbols.NUM_FIRST_MOVES)
 local move_normal = tonumber(symbols.MOVE_NORMAL)

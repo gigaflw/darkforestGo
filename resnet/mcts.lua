@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-03 16:01:28
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-03 18:47:36
+-- @Last Modified time: 2017-12-19 14:37:06
 
 local CNNPlayerV2 = require 'cnnPlayerV2.cnnPlayerV2Framework'
 local playoutv2 = require('mctsv2.playout_multithread')
@@ -17,7 +17,7 @@ local function set_playout_params_from_opt()
     p.pipe_path = 'mctspipe'
     p.tier_name = 'testing'
     p.server_type = playoutv2.server_local
-    p.verbose = 1 -- 1 | 2 | 3
+    p.verbose = 3 -- 1 | 2 | 3
     p.num_gpu = 1
     p.dynkomi_factor = 0.0
     p.cpu_only = common.FALSE
@@ -25,7 +25,7 @@ local function set_playout_params_from_opt()
 
     tp.max_depth_default_policy = 10000
     tp.max_send_attempts = 3
-    tp.verbose = 1
+    tp.verbose = 3
     tp.time_limit = 10
     tp.num_receiver = 1
     tp.sigma = 0.05
@@ -102,13 +102,16 @@ b = board.new()
 board.clear(b)
 callbacks.new_game()
 
--- cnnplayer:play('b', 'd4', false) -- call move_receiver to tell search thread to prune
-board.play(b, 4, 4, common.black)
-playoutv2.prune_xy(tr, 4, 4, common.black, nil)
+-- -- cnnplayer:play('b', 'd4', false) -- call move_receiver to tell search thread to prune
+-- board.play(b, 4, 4, common.black)
+-- playoutv2.prune_xy(tr, 4, 4, common.black, nil)
 
--- cnnplayer:genmove('w')
-m = playoutv2.play_rollout(tr, nil, b) -- the Move class in playout_common.h
-print(m.x, m.y, m.player)
+-- -- cnnplayer:genmove('w')
+-- m = playoutv2.play_rollout(tr, nil, b) -- the Move class in playout_common.h
+-- print(m.x, m.y, m.player)
 
-board.show(b, 'last_move')
+-- board.show(b, 'last_move')
+
+io.read()
+print("Is going to free tr!")
 if tr then playoutv2.free(tr) end
