@@ -22,15 +22,19 @@ local resnet_utils = require 'resnet.utils'
 local pkg = require 'rl_network.move_package'
 
 local opt = pl.lapp[[
-    --pipe_path     (default ".")
+    --pipe_path     (default "./pipes")
     --num_attempt   (default 10)            Number of attempt before wait_board gave up and return nil.
     --max_batch     (default 32)
     --use_dp        (default false)         Whether add to candidate move with default policy
+    --model_dir     (default './rl.ckpt')   Where to find model file from
+    --model         (default './rl.ckpt/initial.params')
+    --dev_model     (default 'rl.e(%d+).params')    The regex for target model file name to check whether we need to update the model
+
     --single_step                           Ask everytime a batch of move is to be sent back
     -v, --verbose                           Whether print tons of things
 
     ** GPU Options  **
-    --device             (default 1)        which core to use on a multicore GPU environment
+    --device             (default 3)        which core to use on a multicore GPU environment
     --use_gpu            (default true)     No use when there is no gpu devices
 ]]
 
@@ -45,21 +49,30 @@ else
 end
 if opt.verbose then utils.dbg_set() end
 
+function get_latest_dev_model(current)
+    local latest, filename = current, nil
+    for f in paths.iterdirs(opt.model_dir) do
+        version = tonumber(f:match(opt.dev_model))
+        if version and version > latest then
+            latest = version
+            filename = f
+        end
+    end
+    return filename
+end
+
 local SIG_OK = tonumber(symbols.SIG_OK)
 local NUM_POSSIBLE_MOVES = 362  -- 19*19 + pass move
 local TIME_RELOAD = 5  -- (second) the interval to reload the model
 
-local model_filename = 'resnet.ckpt/latest.cpu.params'
--- local rl_model_name = 'resnet.ckpt/16/latest.params'  -- TODO: need to change the rl model name
-
 ---- Loading Model ----
-print("Loading model = " .. model_filename)
-local model = torch.load(model_filename).net
+print("Loading model = " .. opt.model)
+local model = torch.load(opt.model).net
 print("Loading complete")
 
 ---- Init Pipe File ----
 
-local exchanger = C.ExLocalInit(opt.pipe_path, opt.device - 1, common.TRUE)
+local exchanger = C.ExLocalInit(opt.pipe_path, 0, common.TRUE)
 print("CNN Exchanger initialized.")
 print("Size of MBoard: " .. ffi.sizeof('MBoard'))
 print("Size of MMove: " .. ffi.sizeof('MMove'))
@@ -87,7 +100,7 @@ io.flush()
 
 local boards = {}
 local last_update_time, current_time = common.wallclock(), nil
-
+local current_model_index = -1
 -------------------
 --   Main Loop   --
 -------------------
@@ -95,15 +108,16 @@ while true do
     block_ids:zero()      -- block_ids[i] is the index for the i-th valid board received
     boards = {}
 
-    -- current_time = common.wallclock()
-    -- if current_time - last_update_time > TIME_RELOAD then
-    --     last_update_time = current_time
-    --     if io.open(rl_model_name, 'r') then
-    --         print("Reloading model = " .. rl_model_name)
-    --         model = torch.load(rl_model_name).net
-    --         print("Reloading complete")
-    --     end
-    -- end
+    current_time = common.wallclock()
+    if current_time - last_update_time > TIME_RELOAD then
+        last_update_time = current_time
+        local filename = get_latest_dev_model(current_model_index)
+        if filename then
+            print("Reloading model = " .. filename)
+            model = torch.load(filename).net
+            print("Reloading complete")
+        end
+    end
 
     local num_valid = 0   -- we can receive `max_batch` boards simultaneously, but only `num_valid` of then are given
 

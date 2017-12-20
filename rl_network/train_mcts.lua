@@ -13,23 +13,22 @@ local pl = require 'pl.import_into'()
 
 local opt = pl.lapp[[
     ** Trainer Options **
-    --epoches            (default 10)        The number of batches in rl_training.
+    --epochs             (default 10)
     --epoch_per_ckpt     (default 1)
-    --game_per_epoch     (default 3)         The number of games to be played in an epoch.
-    --sgf_save                               Whether save sgf file per game in rl_training.
-    --log_file           (default 'log.txt')        If given, log will be saved
-    --ckpt_dir           (default './rl.ckpt')    Where to store the checkpoints
-    --ckpt_prefix        (default '')        Extra info to be prepended to checkpoint files
-    --model_filename     (default './resnet.ckpt/latest.cpu.params')        Filename for model
+    --game_per_epoch     (default 20)               The number of games to be played in an epoch.
+    --sgf_dir            (default './dataset/sgf')  Where to save sgf files, (will not save if not given)
+    --log_file           (default '')               If given, log will be saved
+    --ckpt_dir           (default './rl.ckpt')      Where to store the checkpoints
+    --ckpt_prefix        (default '')               Extra info to be prepended to checkpoint files
+    --model_filename     (default './rl.ckpt/initial.params')
 
     ** GPU Options **
-    --use_gpu            (default true)     No use when there is no gpu devices
-    --device             (default 2)        which core to use on a multicore GPU environment
+    --use_gpu            (default true)             No use when there is no gpu devices
+    --device             (default 4)                Which core to use on a multicore GPU environment
 
     ** Player Options **
     --win_rate_thres    (default 0.0)           If the win rate is lower than that, resign.
     --resign                                    Whether support resign in rl_training.
-    --pass_after_pass                           We will pass if the enemy pass
     --exec              (default "")            NO USE
     --setup_board       (default "")            NO USE.Setup board. The argument is "sgfname moveto"
 
@@ -38,7 +37,7 @@ local opt = pl.lapp[[
     -v,--verbose        (default 1)             The verbose level (1 = critical, 2 = info, 3 = debug)
 
     *** cnn evaluator ***
-    --pipe_path         (default ".")           Pipe path
+    --pipe_path         (default "./pipes")     Pipe path
     --server_type       (default "local")       We can choose "local" or "cluster". For open source version, for now "cluster" is not usable.
     --max_send_attempts (default 3)             #attempts to send to the server.
     --acc_prob_thres    (default 0.8)           Accumulated probability threshold. We remove the other moves if by the time we see it, the accumulated prob is greater than this thres.
@@ -269,5 +268,5 @@ end
 
 local Trainer = require 'rl_network.trainer'
 local model = torch.load(opt.model_filename).net
-trainer = Trainer(mode, opt, callbacks)
-trainer:train(model, opt, callbacks)
+trainer = Trainer(model, opt, callbacks)
+trainer:train()

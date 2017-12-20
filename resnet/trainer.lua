@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-19 19:07:53
+-- @Last Modified time: 2017-12-20 13:42:39
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -261,7 +261,7 @@ function Trainer:save(epoch, filename)
         optim_state = self.optim_state
     }
     obj.optim_state.dfdx = nil -- at the cost of losing momentum, shrink ckpt's size
-    filename = self.opt.ckpt_prefix..'.'..filename
+    filename = self.opt.ckpt_prefix..filename
     torch.save(paths.concat(self.opt.ckpt_dir, filename), obj)
     self:log("checkpoint '"..filename.."' saved")
 end

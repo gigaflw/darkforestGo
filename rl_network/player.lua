@@ -158,7 +158,7 @@ function rl_player:score(show_more)
     local max_score = scores:max()
     local stones = om.get_territorylist(territory)
 
-    io.stderr:write(string.format("Score (%s): %f, Playout min: %f, Playout max: %f, #dame: %d", self.opt.default_policy, score, min_score, max_score, #stones.dames));
+    io.stderr:write(string.format("Score (%s): %f, Playout min: %f, Playout max: %f, #dame: %d\n", self.opt.default_policy, score, min_score, max_score, #stones.dames));
     if show_more then
         -- Show the deadstone.
         local dead_stones = om.get_deadlist(livedead)
@@ -200,7 +200,7 @@ function rl_player:genmove(player)
 
     -- Do not pass until after 140 ply.
     -- After that, if enemy pass then we pass.
-    if self.opt.pass_after_pass and self.b._ply >= 140 and goutils.coord_is_pass(self.b._last_move) then
+    if self.b._ply >= 140 and goutils.coord_is_pass(self.b._last_move) then
         -- If the situation has too many dames, we don't pass.
         local _, _, _, stats = self:score()
         if stats.num_dame < 5 then
@@ -250,17 +250,6 @@ function rl_player:genmove(player)
         io.stderr:write("Warning! No move is valid!")
         -- Play pass here.
         xf, yf = 0, 0
-    end
-
-    -- Continuous pass
-    if goutils.coord_is_pass(self.b._last_move) and xf == 0 and yf == 0 then
-        local _, _, _, scores = self:score()
-        return true, "resign", {
-            resign_side = player,
-            score = scores.score,
-            min_score = scores.min_score,
-            max_score = scores.max_score
-        }
     end
 
     local move = goutils.compose_move_gtp(xf, yf)

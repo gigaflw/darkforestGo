@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-20 11:13:43
+-- @Last Modified time: 2017-12-20 15:10:01
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -23,7 +23,7 @@ local default_opt = {
     ---- Dataset Options ----
     dataset_dir = './dataset',
     style = 'traverse',             -- 'sample': select samples at random; 'traverse': select data in order
-    batch_size = 24,                -- The number of positions in each batch, 2048 in AlphaGo Zero thesis
+    batch_size = 128,               -- The number of positions in each batch, 2048 in AlphaGo Zero thesis
     data_augment = false,           -- use rotation/reflection to augment dataset
     data_pool_size = -1,            -- Use a pool to buffer and shuffle the inputs better
     do_estimate = true,             -- Estimate the score if the score is unclear
@@ -31,8 +31,8 @@ local default_opt = {
     debug = false,                  -- If given, no shuffling or augmentation will be performed
 
     ---- Training Options ----
-    max_batches = 20,               -- -1 means each epoch will go through all data
-    epochs = 2,                   -- The number of epochs, where all data will trained once
+    max_batches = -1,               -- -1 means each epoch will go through all data
+    epochs = 5,                     -- The number of epochs, in each of which all data will trained once
     epoch_per_ckpt = 10,            -- The number of epochs per saving checkpoints
     ckpt_dir = './resnet.ckpt',     -- Where to store the checkpoints
     ckpt_prefix = '',               -- Extra info to be prepended to checkpoint files
@@ -66,7 +66,7 @@ local function _save_sgf_to_dataset(dataset, name)
         Save an array of sgf strings into dataset file in the format of torchnet.IndexedDataset.
     ]]
     local writer = tnt.IndexedDatasetWriter(name..'.idx', name..'.bin', 'table')
-    for _, d in pairs(dataset) do writer:add({sgf = d}) end
+    for _, d in pairs(dataset) do if d then writer:add({sgf = d}) end end
     writer:close()
 end
 
