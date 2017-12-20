@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-20 11:11:52
+-- @Last Modified time: 2017-12-20 13:11:37
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -11,11 +11,11 @@ local CBoard = require 'board.board'
 local argcheck = require 'argcheck'
 local resnet_utils = require 'resnet.utils'
 
-local om = require 'board.ownermap'
-local dp_v2 = require 'board.pattern_v2'
-local _owner_map = om.new()
-local _def_policy = dp_v2.init('models/playout-model.bin', 'jp')
-dp_v2.set_sample_params(_def_policy, -1, 0.125)
+-- local om = require 'board.ownermap'
+-- local dp_v2 = require 'board.pattern_v2'
+-- local _owner_map = om.new()
+-- local _def_policy = dp_v2.init('models/playout-model.bin', 'jp')
+-- dp_v2.set_sample_params(_def_policy, -1, 0.125)
 
 local parse_and_put = argcheck{
     doc = [[
@@ -51,20 +51,20 @@ local parse_and_put = argcheck{
 
         local winner = game:get_result_enum()
 
-        local score = tonumber(game:get_result():sub(3))
-        if score then
-            score = score * (winner == player and 1 or -1) / 361
-        elseif do_estimate then
-            score, _, _, _ = om.util_compute_final_score(
-                _owner_map, board, game:get_komi(), nil,
-                function (b, max_depth) return dp_v2.run(_def_policy, b, max_depth, false) end
-            )
-            score = score / 361
-        end
+        -- local score = tonumber(game:get_result():sub(3))
+        -- if score then
+        --     score = score * (winner == player and 1 or -1) / 361
+        -- elseif do_estimate then
+        --     score, _, _, _ = om.util_compute_final_score(
+        --         _owner_map, board, game:get_komi(), nil,
+        --         function (b, max_depth) return dp_v2.run(_def_policy, b, max_depth, false) end
+        --     )
+        --     score = score / 361
+        -- end
 
         local s = resnet_utils.board_to_features(board, player)
         local a = moveIdx
-        local z = score or (winner == common.res_unknown and 0 or (winner == player and 1 or -1))
+        local z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
 
         if not is_pass then CBoard.play(board, x, y, player) end
 
