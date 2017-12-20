@@ -59,6 +59,7 @@ BOOL cnn_policy(ThreadInfo *info, TreeBlock *bl, const Board *board, BlockOffset
 
   Stone player = board->_next_player;
 
+  PRINT_DEBUG("CNN Policy...\n");
   for (int i = 0; i < bl->n; ++i) {
     float black_win = ((float)bl->data.stats[i].black_win) + 0.5;
     unsigned int n = bl->data.stats[i].total + 1;
@@ -86,8 +87,8 @@ BOOL cnn_policy(ThreadInfo *info, TreeBlock *bl, const Board *board, BlockOffset
 
     // For win rate, we need to put some DCNN prior. The prior will diminish when n is large, but remain strong when n is small.
     // float winning_rate_with_prior = (s->params.decision_mixture_ratio * bl->cnn_data.confidences[i] + s->params.online_prior_mixture_ratio * online_prior) / n + winning_rate;
-    PRINT_DEBUG("[%d]: %s, score = %f, n = %d, n_parent = %d, winning_rate = %f, cnn = %f, score = %f\n",
-        i, get_move_str(bl->data.moves[i], player, buf), this_score, n, n_parent, winning_rate, bl->cnn_data.confidences[i], this_score);
+    PRINT_DEBUG("[%d]: %s, score = %f, n = %d, n_parent = %d, winning_rate = %f, cnn = %f\n",
+        i, get_move_str(bl->data.moves[i], player, buf), this_score, n, n_parent, winning_rate, bl->cnn_data.confidences[i]);
     //
     if (this_score > best_score) {
       best_score = this_score;

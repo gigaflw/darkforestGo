@@ -144,8 +144,7 @@ static int block_all_threads(TreeHandle *s, BOOL print_and_reset_all_stats) {
       leaf_expanded, num_policy_failed, num_expand_failed, preempt_playout_count);
   PRINT_INFO("Stats [Send] infunc = %d, attempt = %d, success = %d\n", cnn_send_infunc, cnn_send_attempt, cnn_send_success);
   PRINT_INFO("Stats [Policy] use_ucb = %d, use_cnn = %d, use_async = %d\n", use_ucb, use_cnn, use_async);
-  fprintf(stderr,"p->root->data.stats[0].total: %d, #rollout: %d, #cnn: %d, max_depth: %d\n", s->p.root->data.stats[0].total, s->rollout_count, s->dcnn_count, max_depth);
-
+  PRINT_INFO("p->root->data.stats[0].total: %d, #rollout: %d, #cnn: %d, max_depth: %d\n", s->p.root->data.stats[0].total, s->rollout_count, s->dcnn_count, max_depth);
   // Clear up the model.
   if (s->params.use_online_model) {
     fprintf(stderr,"Online model average error = %f, count = %d\n", s->model_acc_err / s->model_count_err, s->model_count_err);
@@ -953,6 +952,7 @@ static void *threaded_expansion(void *ctx) {
       }
       aver_black_moku /= s->params.num_playout_per_rollout;
     }
+    PRINT_INFO("DP: aver black moku = %f\n", aver_black_moku);
 
     PRINT_DEBUG("Back propagation ...\n");
     s->callback_backprop(info, aver_black_moku, board._next_player, end_ply, board_on_child, child_offset, b);
