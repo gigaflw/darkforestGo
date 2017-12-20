@@ -26,6 +26,8 @@ local opt = pl.lapp[[
     --num_attempt   (default 10)            Number of attempt before wait_board gave up and return nil.
     --max_batch     (default 32)
     --use_dp        (default false)         Whether add to candidate move with default policy
+    --single_step                           Ask everytime a batch of move is to be sent back
+    -v, --verbose                           Whether print tons of things
 
     ** GPU Options  **
     --device             (default 1)        which core to use on a multicore GPU environment
@@ -41,6 +43,7 @@ if opt.use_gpu then
 else
     opt.device = 1
 end
+if opt.verbose then utils.dbg_set() end
 
 local SIG_OK = tonumber(symbols.SIG_OK)
 local NUM_POSSIBLE_MOVES = 362  -- 19*19 + pass move
@@ -81,7 +84,6 @@ pkg.init(opt.max_batch)
 
 print("ready")
 io.flush()
-utils.dbg_set()
 
 local boards = {}
 local last_update_time, current_time = common.wallclock(), nil
@@ -93,15 +95,15 @@ while true do
     block_ids:zero()      -- block_ids[i] is the index for the i-th valid board received
     boards = {}
 
-    current_time = common.wallclock()
-    if current_time - last_update_time > TIME_RELOAD then
-        -- last_update_time = current_time
-        -- if io.open(rl_model_name, 'r') then
-        --     print("Reloading model = " .. rl_model_name)
-        --     model = torch.load(rl_model_name).net
-        --     print("Reloading complete")
-        -- end
-    end
+    -- current_time = common.wallclock()
+    -- if current_time - last_update_time > TIME_RELOAD then
+    --     last_update_time = current_time
+    --     if io.open(rl_model_name, 'r') then
+    --         print("Reloading model = " .. rl_model_name)
+    --         model = torch.load(rl_model_name).net
+    --         print("Reloading complete")
+    --     end
+    -- end
 
     local num_valid = 0   -- we can receive `max_batch` boards simultaneously, but only `num_valid` of then are given
 
@@ -137,6 +139,10 @@ while true do
 
         print(string.format("Computation = %f", common.wallclock() - start))
 
+        if opt.single_step then
+            print("In single step mode, wanna send back?")
+            io.read()
+        end
         local start = common.wallclock()
         for i = 1, num_valid do
             local mmove = pkg.prepare_move(block_ids[i], probs_sorted_v[i], probs_sorted_k[i], values[i], opt.use_dp)

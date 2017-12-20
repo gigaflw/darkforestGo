@@ -16,7 +16,6 @@ local opt = pl.lapp[[
     --epoches            (default 10)        The number of batches in rl_training.
     --epoch_per_ckpt     (default 1)
     --game_per_epoch     (default 3)         The number of games to be played in an epoch.
-    --resign                                 Whether support resign in rl_training.
     --sgf_save                               Whether save sgf file per game in rl_training.
     --log_file           (default 'log.txt')        If given, log will be saved
     --ckpt_dir           (default './rl.ckpt')    Where to store the checkpoints
@@ -29,6 +28,8 @@ local opt = pl.lapp[[
 
     ** Player Options **
     --win_rate_thres    (default 0.0)           If the win rate is lower than that, resign.
+    --resign                                    Whether support resign in rl_training.
+    --pass_after_pass                           We will pass if the enemy pass
     --exec              (default "")            NO USE
     --setup_board       (default "")            NO USE.Setup board. The argument is "sgfname moveto"
 
@@ -44,10 +45,10 @@ local opt = pl.lapp[[
 
     *** tree search ***
     --cpu_only                                  Whether we only use fast rollout.
-    --num_tree_thread   (default 16)            The number of threads used to expand MCTS tree.
-    --rollout           (default 2)             How many games are played in one search
-    --dcnn_rollout      (default -1)            The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
-    --dynkomi_factor    (default 0.0)           MYSTERIOUS
+    --num_tree_thread       (default 4)         The number of threads used to expand MCTS tree.
+    --rollout               (default 1000)      How many games are played in one search
+    --dcnn_rollout          (default -1)        The number of dcnn rollout we use (If we set to -1, then it is the same as rollout), if cpu_only is set, then dcnn_rollout is not used.
+    --dynkomi_factor        (default 0.0)       MYSTERIOUS
     --single_move_return                        Use single move return (When we only have one choice, return the move immediately)
     --expand_search_endgame                     MYSTERIOUS
     --percent_playout_in_expansion   (default 0)      The percent of threads that will run playout when we expand the node. Other threads will block wait.
@@ -234,7 +235,7 @@ function callbacks.new_game()
     count = 0
     signature = utils.get_signature()
     io.stderr:write("New MCTS game, signature: " .. signature)
-    os.execute("mkdir -p " .. paths.concat(opt.pipe_path, signature))
+    -- os.execute("mkdir -p " .. paths.concat(opt.pipe_path, signature))
     playoutv2.print_params(tr)
 end
 

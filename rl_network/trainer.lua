@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-19 19:50:51
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-19 20:40:32
+-- @Last Modified time: 2017-12-19 23:24:48
 
 local utils = require 'utils.utils'
 local board = require 'board.board'
@@ -93,10 +93,10 @@ function Trainer:play_one_game()
     self.player:clear_board()
     local sgf
     while true do
-        local s, str, res = self.player:g()
-        if not s then
+        local valid, move, res = self.player:g()
+        if not valid then
             break
-        elseif str == "resign" then
+        elseif move == "resign" then
             sgf = self:save_sgf_file(res, "resnet", "resnet", opt.sgf_save)
             break
         end
