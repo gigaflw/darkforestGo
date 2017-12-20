@@ -104,25 +104,23 @@ end
 
 -- Save the current history to sgf.
 function rl_player:save_sgf(filename, re, pb, pw, is_save)
-    local f = io.open(filename, "w")
-    if not f then
-        return false, "file " .. filename .. " cannot be opened"
-    end
-
     local date = utils.get_current_date()
     local header = {
         komi = self.val_komi,
         handi = self.val_handi,
         rule = self.rule,
-        player_b = opt_evaluator.codename,
-        player_w = opt_evaluator.codename,
+        player_b = pb,
+        player_w = pw,
         date = date,
         result = re
     }
 
     local res = sgfloader.sgf_string(header, self.sgf_history)
+
     if is_save then
-        f:write()
+        local f = io.open(filename, "w")
+        if not f then return false, "file " .. filename .. " cannot be opened" end
+        f:write(res)
         f:close()
         io.stderr:write("Sgf " .. filename .. " saved.\n")
     end
@@ -203,7 +201,7 @@ function rl_player:genmove(player)
 
     -- Do not pass until after 140 ply.
     -- After that, if enemy pass then we pass.
-    if self.b._ply >= 140 and goutils.coord_is_pass(self.b._last_move) then
+    if self.opt.pass_after_pass and self.b._ply >= 140 and goutils.coord_is_pass(self.b._last_move) then
         -- If the situation has too many dames, we don't pass.
         local _, _, _, stats = self:score()
         if stats.num_dame < 5 then
@@ -253,6 +251,17 @@ function rl_player:genmove(player)
         io.stderr:write("Warning! No move is valid!")
         -- Play pass here.
         xf, yf = 0, 0
+    end
+
+    -- Continuous pass
+    if goutils.coord_is_pass(self.b._last_move) and xf == 0 and yf == 0 then
+        local _, _, _, scores = self:score()
+        return true, "resign", {
+            resign_side = player,
+            score = scores.score,
+            min_score = scores.min_score,
+            max_score = scores.max_score
+        }
     end
 
     local move = goutils.compose_move_gtp(xf, yf)

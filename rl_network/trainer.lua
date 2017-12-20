@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-19 19:50:51
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-19 23:24:48
+-- @Last Modified time: 2017-12-20 10:00:27
 
 local utils = require 'utils.utils'
 local board = require 'board.board'
@@ -28,6 +28,8 @@ function Trainer:__init(net, opt, callbacks)
     self.net = net
     self.player = RLPlayer(callbacks, opt)
     self.resnet = require 'resnet.rl_train'
+
+    self._epoch = 1
 end
 
 function Trainer:train()
@@ -37,7 +39,8 @@ function Trainer:train()
 
     local timer = torch.Timer()
 
-    for e = 1, opt.epoches do
+    while self._epoch < opt.epoches do
+        e = self._epoch
 
         ----------------------------
         -- generate dataset
@@ -67,6 +70,8 @@ function Trainer:train()
         else
             self:save(e, 'rl.latest.params') -- save 'latest.params' every epoch
         end
+
+        self._epoch = e + 1
     end
 
     self:log("Reinforcement training ends")
@@ -97,7 +102,7 @@ function Trainer:play_one_game()
         if not valid then
             break
         elseif move == "resign" then
-            sgf = self:save_sgf_file(res, "resnet", "resnet", opt.sgf_save)
+            sgf = self:get_sgf_string(res, opt.sgf_save)
             break
         end
     end
@@ -124,21 +129,22 @@ function Trainer:log(message)
     end
 end
 
--- Write the SGF file
-function Trainer:save_sgf_file(res, pb, pw, is_save)
-    local footprint = string.format("%s-%s-%s-%s__%d", utils.get_signature(), pb, pw, utils.get_randString(6), self.player.b._ply)
-    local srcSGF = string.format("%s.sgf", footprint)
-    local re
+function Trainer:get_sgf_string(res, save_to_file)
+    local model_name = string.format("resnet%04d", self._epoch)
 
+    local footprint = string.format("%s-%s-%s__%d", utils.get_signature(), self._epoch, utils.get_randString(6), self.player.b._ply)
+    local filename = footprint..'.sgf'
+
+    local result
     if res.resign_side == common.white then
-        re = "B+Resign"
+        result = "B+Resign"
     elseif res.resign_side == common.black then
-        re = "W+Resign"
+        result = "W+Resign"
     else
-        re = res.score > 0 and string.format("B+%.1f", res.score) or string.format("W+%.1f", -res.score)
+        result = res.score > 0 and string.format("B+%.1f", res.score) or string.format("W+%.1f", -res.score)
     end
 
-    return self.player:save_sgf(srcSGF, re, pb, pw, is_save)
+    return self.player:save_sgf(filename, result, model_name, model_name, save_to_file)
 end
 
 return Trainer
