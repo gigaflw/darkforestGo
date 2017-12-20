@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-19 20:22:16
+-- @Last Modified time: 2017-12-20 11:13:43
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -26,6 +26,7 @@ local default_opt = {
     batch_size = 24,                -- The number of positions in each batch, 2048 in AlphaGo Zero thesis
     data_augment = false,           -- use rotation/reflection to augment dataset
     data_pool_size = -1,            -- Use a pool to buffer and shuffle the inputs better
+    do_estimate = true,             -- Estimate the score if the score is unclear
     verbose = false,                -- Whether print data loading detailsv
     debug = false,                  -- If given, no shuffling or augmentation will be performed
 

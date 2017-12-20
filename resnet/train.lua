@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-19 19:08:05
+-- @Last Modified time: 2017-12-20 11:11:02
 
 local doc = [[
     The following script should always be the entrance of the training procedure
@@ -17,6 +17,7 @@ local opt = pl.lapp[[
     --style              (default 'sample') 'sample': select samples at random; 'traverse': select data in order
     --data_augment                          use rotation/reflection to augment dataset
     --data_pool_size     (default 240)      Use a pool to buffer and shuffle the inputs better
+    --do_estimate                           Estimate the score if the score is unclear
     --verbose                               Whether print data loading detailsv
     --debug                                 If given, no shuffling or augmentation will be performed
 

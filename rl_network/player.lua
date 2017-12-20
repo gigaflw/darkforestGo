@@ -11,7 +11,6 @@ local board = require 'board.board'
 local om = require 'board.ownermap'
 local pl = require 'pl.import_into'()
 local class = require 'class'
-local ownermap = om.new()
 local moves = {}
 
 local function verify_player(b, player)
