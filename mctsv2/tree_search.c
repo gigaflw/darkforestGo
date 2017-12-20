@@ -163,9 +163,9 @@ static int block_all_threads(TreeHandle *s, BOOL print_and_reset_all_stats) {
 
   // Check "search complete semaphore", clear it if necessary.
   int sem_value;
-  sem_getvalue(s->sem_search_complete, &sem_value);
+  sem_getvalue(&s->sem_search_complete, &sem_value);
   PRINT_INFO("Semaphore value: %d\n", sem_value);
-  if (sem_value > 0) sem_wait(s->sem_search_complete);
+  if (sem_value > 0) sem_wait(&s->sem_search_complete);
   s->flag_search_complete = SC_NOT_YET;
   s->all_stats_cleared = TRUE;
 
@@ -669,7 +669,7 @@ static inline BOOL threaded_block_if_needed(void *ctx) {
     }
     if (count == s->params.num_tree_thread) {
       PRINT_INFO("Last thread blocked at %lf\n", wallclock());
-      sem_post(s->sem_all_threads_blocked);
+      sem_post(&s->sem_all_threads_blocked);
     }
     sem_wait(&s->sem_all_threads_unblocked);
   }

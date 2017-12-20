@@ -34,7 +34,7 @@ local opt = pl.lapp[[
     -v, --verbose                           Whether print tons of things
 
     ** GPU Options  **
-    --device             (default 3)        which core to use on a multicore GPU environment
+    --device             (default 4)        which core to use on a multicore GPU environment
     --use_gpu            (default true)     No use when there is no gpu devices
 ]]
 
