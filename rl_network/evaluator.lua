@@ -29,6 +29,7 @@ local opt = pl.lapp[[
     --model_dir     (default './rl.ckpt')   Where to find model file from
     --model         (default './rl.ckpt/initial.params')
     --dev_model     (default 'rl.e(%d+).params')    The regex for target model file name to check whether we need to update the model
+    --reload_time   (default 5)             Time in second to check whether there is a newer model we can load
 
     --single_step                           Ask everytime a batch of move is to be sent back
     -v, --verbose                           Whether print tons of things
@@ -51,19 +52,18 @@ if opt.verbose then utils.dbg_set() end
 
 function get_latest_dev_model(current)
     local latest, filename = current, nil
-    for f in paths.iterdirs(opt.model_dir) do
+    for f in paths.iterfiles(opt.model_dir) do
         version = tonumber(f:match(opt.dev_model))
         if version and version > latest then
             latest = version
             filename = f
         end
     end
-    return filename
+    return paths.concat(opt.model_dir, filename), latest
 end
 
 local SIG_OK = tonumber(symbols.SIG_OK)
 local NUM_POSSIBLE_MOVES = 362  -- 19*19 + pass move
-local TIME_RELOAD = 5  -- (second) the interval to reload the model
 
 ---- Loading Model ----
 print("Loading model = " .. opt.model)
@@ -109,9 +109,10 @@ while true do
     boards = {}
 
     current_time = common.wallclock()
-    if current_time - last_update_time > TIME_RELOAD then
+    if current_time - last_update_time > opt.reload_time then
         last_update_time = current_time
-        local filename = get_latest_dev_model(current_model_index)
+        local filename
+        filename, current_model_index = get_latest_dev_model(current_model_index)
         if filename then
             print("Reloading model = " .. filename)
             model = torch.load(filename).net
