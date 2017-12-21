@@ -13,10 +13,10 @@ local pl = require 'pl.import_into'()
 
 local opt = pl.lapp[[
     ** Trainer Options **
-    --mode               (default 'train')          'generate' | 'train'
+    --mode               (default 'train')          'generate' | 'train' | 'hybrid'
     --log_file           (default '')               If given, log will be saved
     --dataset_dir        (default './dataset')      Where to save dataset
-    --dataset_name       (default '')               Name for dataset, timestamp by default
+    --dataset_name       (default '')               Name for dataset, timestamp by default, ignored for hybrid mode
 
     *** for generate mode ***
     ----- the model used to generate games is set in the options of `evaluator.lua`
@@ -284,7 +284,11 @@ local Trainer = require 'rl_network.trainer'
 if opt.mode == 'train' then
     local model = torch.load(opt.model).net
     trainer = Trainer(model, opt, callbacks)
-    trainer:train()
+    trainer:train(false)
+elseif opt.mode == 'hybrid' then
+    local model = torch.load(opt.model).net
+    trainer = Trainer(model, opt, callbacks)
+    trainer:train(true)
 elseif opt.mode == 'generate' then
     trainer = Trainer(nil, opt, callbacks)
     trainer:generate()

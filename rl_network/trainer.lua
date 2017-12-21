@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-19 19:50:51
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-21 09:53:50
+-- @Last Modified time: 2017-12-21 11:18:55
 
 local pl = require 'pl.import_into'()
 local utils = require 'utils.utils'
@@ -22,15 +22,25 @@ function Trainer:__init(net, opt, callbacks)
     self._epoch = 1
 end
 
-function Trainer:generate()
+function Trainer:generate(dataset_name)
+    local doc = [[
+        generate a torchnet.IndexedDataset (.bin & .idx) dataset
+        
+        the dataset will be saved to opt.dataset_dir/{dataset_name}.bin
+        also sgf will be save to opt.sgf_dir/{dataset_name}/*.sgf
+
+        You should open `evaluator.lua` beforehand.
+        Also the model used is set in `evaluator.lua`
+    ]]
     local opt = self.opt
-    
-    if opt.sgf_dir ~= '' then os.execute('mkdir -p '..paths.concat(opt.sgf_dir, opt.dataset_name)) end
+    if dataset_name == nil then dataset_name = opt.dataset_name end
+    if opt.sgf_dir ~= '' then os.execute('mkdir -p '..paths.concat(opt.sgf_dir, dataset_name)) end
+
     function save_sgf(sgf)
         if opt.sgf_dir == '' then return end
 
         local footprint = string.format("%s-%s-%s__%d", utils.get_signature(), self._epoch, utils.get_randString(6), self.player.b._ply)
-        local filename = paths.concat(opt.sgf_dir, opt.dataset_name, footprint..'.sgf')
+        local filename = paths.concat(opt.sgf_dir, dataset_name, footprint..'.sgf')
         local f = io.open(filename, "w")
         if not f then return false, "file " .. filename .. " cannot be opened" end
         f:write(sgf)
@@ -55,13 +65,19 @@ function Trainer:generate()
         end
         timer:reset()
     end
-    
-    local dataset_path = paths.concat(opt.dataset_dir, opt.dataset_name)
+
+    local dataset_path = paths.concat(opt.dataset_dir, dataset_name)
     self.resnet.save_sgf_to_dataset(sgf_dataset, dataset_path)  -- generate .bin & .idx file
     self:log(string.format("Dataset '%s.bin' saved", dataset_path))
 end
 
-function Trainer:train()
+function Trainer:train(do_generate)
+    local doc = [[
+        Train the model on the basis of `self.net`
+        If `do_generate` is given, a `generate` process will take place before the training,
+        and the training will use the dataset just generated.
+        This requires to open `evaluator.lua` beforehand.
+    ]]
     local opt = self.opt
     local res_opt = self.resnet.get_opt({
         log_file = opt.log_file, -- save to the same log file
@@ -74,10 +90,16 @@ function Trainer:train()
 
     while self._epoch < opt.epochs do
         local e = self._epoch
+        local dataset_name = do_generate and string.format('rl%04d', self._epoch) or opt.dataset_name
+        --------------------------------
+        -- generate dataset if necessary
+        --------------------------------
+        if do_generate then self:generate(dataset_name) end
+
         ----------------------------
         -- supervised training
         ----------------------------
-        self.resnet.train_on_the_fly(self.net, opt.dataset_name, string.format("rl%04d", e), res_opt)
+        self.resnet.train_on_the_fly(self.net, dataset_name, dataset_name, res_opt)
         self.net = self:get_current_best_model()
 
         ----------------------------
