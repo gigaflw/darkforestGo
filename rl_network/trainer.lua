@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-19 19:50:51
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-21 12:07:50
+-- @Last Modified time: 2017-12-21 13:15:16
 
 local pl = require 'pl.import_into'()
 local utils = require 'utils.utils'
@@ -85,6 +85,7 @@ function Trainer:train(do_generate)
     ]]
     assert(self.net, "Can't train without self.net")
     local opt = self.opt
+    local initial_dataset = opt.initial_dataset
     local res_opt = self.resnet.get_opt({
         log_file = opt.log_file, -- save to the same log file
         dataset_dir = opt.dataset_dir
@@ -96,11 +97,19 @@ function Trainer:train(do_generate)
 
     while self._epoch < opt.epochs do
         local e = self._epoch
-        local dataset_name = do_generate and string.format('rl%04d', self._epoch) or opt.dataset_name
+        local dataset_name
+
+        if initial_dataset ~= '' then
+            dataset_name = initial_dataset
+        elseif do_generate then
+            dataset_name = string.format('rl%04d', self._epoch)
+        else
+            dataset_name = opt.dataset_name
+        end
         --------------------------------
         -- generate dataset if necessary
         --------------------------------
-        if do_generate then self:generate(dataset_name) end
+        if initial_dataset == '' and do_generate then self:generate(dataset_name) end
 
         ----------------------------
         -- supervised training
@@ -121,6 +130,7 @@ function Trainer:train(do_generate)
         self:save(e, 'rl.latest.params') -- save 'latest.params' every epoch
 
         self._epoch = e + 1
+        initial_dataset = ''
     end
 
     self:log("Reinforcement training ends")

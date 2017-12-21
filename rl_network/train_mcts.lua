@@ -31,6 +31,7 @@ local opt = pl.lapp[[
     --model              (default './rl.ckpt/initial.params')   The initial model. Ignored if resume_ckpt is given.
     --resume_ckpt        (default '')
     --continue                                      Continue from the last epoch
+    --initial_dataset    (default '')               Only useful in hybrid mode, the first dataset will be loaded in stead of generated. Have effect even `continue`
 
     ** GPU Options **
     --use_gpu            (default true)             No use when there is no gpu devices
