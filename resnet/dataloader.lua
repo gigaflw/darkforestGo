@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-21 07:16:01
+-- @Last Modified time: 2017-12-21 10:00:48
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -108,6 +108,14 @@ get_dataloader = argcheck{
 
         local dataset_name, dataset_dir = paths.basename(dataset_path), paths.dirname(dataset_path)
         local dataset = tnt.IndexedDataset{fields = { dataset_name }, path = dataset_dir}
+
+        if opt.max_batches == -1 then
+            opt.max_batches = math.floor(dataset:size() * 200 / opt.batch_size) -- positions in each game is estimated to 200
+            assert(opt.max_batches > 0,  string.format(
+                "Too small a dataset with size %d against batch size %d", dataset:size(), opt.batch_size)
+            )
+            print("opt.max_batches is adapted to "..opt.max_batches)
+        end
 
         local game = nil
         local game_idx = 0

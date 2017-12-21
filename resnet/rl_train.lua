@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-20 15:10:01
+-- @Last Modified time: 2017-12-21 10:01:24
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -61,7 +61,9 @@ local default_opt = {
     momentum = 0.9,
 }
 
-local function _save_sgf_to_dataset(dataset, name)
+local export = {}
+
+function export.save_sgf_to_dataset(dataset, name)
     local doc = [[
         Save an array of sgf strings into dataset file in the format of torchnet.IndexedDataset.
     ]]
@@ -69,8 +71,6 @@ local function _save_sgf_to_dataset(dataset, name)
     for _, d in pairs(dataset) do if d then writer:add({sgf = d}) end end
     writer:close()
 end
-
-local export = {}
 
 function export.get_opt(custom_opt)
     local doc = [[
@@ -97,7 +97,12 @@ function export.train_on_the_fly(model, dataset, name, opt)
         @param: model:
             a network given by `resnet.resnet.create_model' or `torch.load(<ckpt>).net`
         @param: dataset: 
+            the path to a torchnet.IndexedDataset,
+            let name = paths.concat(opt.dataset_dir, dataset)
+            there should be file named `{name}.idx` and `{name}.bin`
+            or
             an array of sgf strings, given by `sgf.sgf_string`
+            the dataset will be generated
         @param: name:
             The name for checkpoints and generated dataset, no extension name needed.
             Use epoch or version name.
@@ -127,10 +132,15 @@ function export.train_on_the_fly(model, dataset, name, opt)
 
     local crit = resnet.create_criterion(opt)
 
-    local dataset_path = paths.concat(opt.dataset_dir, name)
-    _save_sgf_to_dataset(dataset, dataset_path)  -- generate .bin & .idx file
+    local dataset_name
+    if type(dataset) == 'table' then
+        dataset_name = paths.concat(opt.dataset_dir, name)
+        export.save_sgf_to_dataset(dataset, dataset_name)  -- generate .bin & .idx file
+    else
+        dataset_name = paths.concat(opt.dataset_dir, dataset)
+    end
 
-    local dataloader = get_dataloader(dataset_path, opt)
+    local dataloader = get_dataloader(dataset_name, opt)
     local trainer = Trainer(model, crit, opt, dataloader)
 
     trainer:train()

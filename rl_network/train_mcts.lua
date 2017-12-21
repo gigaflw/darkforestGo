@@ -13,14 +13,22 @@ local pl = require 'pl.import_into'()
 
 local opt = pl.lapp[[
     ** Trainer Options **
+    --mode               (default 'train')          'generate' | 'train'
+    --log_file           (default '')               If given, log will be saved
+    --dataset_dir        (default './dataset')      Where to save dataset
+    --dataset_name       (default '')               Name for dataset, timestamp by default
+
+    *** for generate mode ***
+    ----- the model used to generate games is set in the options of `evaluator.lua`
+    --games              (default 20)               The number of self-play games
+    --sgf_dir            (default './dataset/sgf')  Where to save sgf files, (will not save if not given)
+
+    *** for train mode ***
     --epochs             (default 10)
     --epoch_per_ckpt     (default 1)
-    --game_per_epoch     (default 20)               The number of games to be played in an epoch.
-    --sgf_dir            (default './dataset/sgf')  Where to save sgf files, (will not save if not given)
-    --log_file           (default '')               If given, log will be saved
     --ckpt_dir           (default './rl.ckpt')      Where to store the checkpoints
     --ckpt_prefix        (default '')               Extra info to be prepended to checkpoint files
-    --model_filename     (default './rl.ckpt/initial.params')
+    --model              (default './rl.ckpt/initial.params')
 
     ** GPU Options **
     --use_gpu            (default true)             No use when there is no gpu devices
@@ -97,15 +105,6 @@ local opt = pl.lapp[[
     --use_custom_params                                 If so, then use custom parameters
     --min_rollout_peekable           (default 20000)    The command peek will return if the minimal number of rollouts exceed this threshold
 ]]
-
-local resnet_utils = require 'resnet.utils'
-opt.use_gpu = opt.use_gpu and resnet_utils.have_gpu() -- only use gpu when there is one
-
-if opt.use_gpu then
-    require 'cutorch'
-    cutorch.setDevice(opt.device)
-    print('use gpu device '..opt.device)
-end
 
 local tr
 local count = 0
@@ -266,7 +265,29 @@ function callbacks.thread_switch(arg)
     end
 end
 
+local resnet_utils = require 'resnet.utils'
+opt.use_gpu = opt.use_gpu and resnet_utils.have_gpu() -- only use gpu when there is one
+
+if opt.use_gpu then
+    require 'cutorch'
+    cutorch.setDevice(opt.device)
+    print('use gpu device '..opt.device)
+end
+
+if opt.dataset_name == '' then
+    local time = os.date("*t")
+    opt.dataset_name = string.format("%04d-%02d-%02d_%02d-%02d", time.year, time.month, time.day, time.hour, time.min)
+    print("set dataset_name to "..opt.dataset_name)
+end
+
 local Trainer = require 'rl_network.trainer'
-local model = torch.load(opt.model_filename).net
-trainer = Trainer(model, opt, callbacks)
-trainer:train()
+if opt.mode == 'train' then
+    local model = torch.load(opt.model).net
+    trainer = Trainer(model, opt, callbacks)
+    trainer:train()
+elseif opt.mode == 'generate' then
+    trainer = Trainer(nil, opt, callbacks)
+    trainer:generate()
+end
+
+trainer:quit()
