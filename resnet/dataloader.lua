@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-21 10:00:48
+-- @Last Modified time: 2017-12-21 12:56:50
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -51,9 +51,10 @@ local parse_and_put = argcheck{
 
         local winner = game:get_result_enum()
 
-        -- local score = tonumber(game:get_result():sub(3))
-        -- if score then
-        --     score = score * (winner == player and 1 or -1) / 361
+        local score = tonumber(game:get_result():sub(3))
+        if score then
+            score = score * (winner == player and 1 or -1) / 361
+        end
         -- elseif do_estimate then
         --     score, _, _, _ = om.util_compute_final_score(
         --         _owner_map, board, game:get_komi(), nil,
@@ -64,7 +65,7 @@ local parse_and_put = argcheck{
 
         local s = resnet_utils.board_to_features(board, player)
         local a = moveIdx
-        local z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
+        local z = score or (winner == common.res_unknown and 0 or (winner == player and 1 or -1))
 
         if not is_pass then CBoard.play(board, x, y, player) end
 
