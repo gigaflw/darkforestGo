@@ -18,18 +18,18 @@ local opt = pl.lapp[[
     --dataset_dir        (default './dataset')      Where to save dataset
     --dataset_name       (default '')               Name for dataset, timestamp by default, ignored for hybrid mode
 
-    *** for generate mode ***
+    *** for generating ***
     ----- the model used to generate games is set in the options of `evaluator.lua`
     --games              (default 20)               The number of self-play games
     --sgf_dir            (default './dataset/sgf')  Where to save sgf files, (will not save if not given)
 
-    *** for train mode ***
+    *** for training ***
     --epochs             (default 10)
     --epoch_per_ckpt     (default 1)
     --ckpt_dir           (default './rl.ckpt')      Where to store the checkpoints
     --ckpt_prefix        (default '')               Extra info to be prepended to checkpoint files
     --model              (default './rl.ckpt/initial.params')   The initial model. Ignored if resume_ckpt is given.
-    --resume_ckpt        (default 'rl.latest.params')
+    --resume_ckpt        (default '')
     --continue                                      Continue from the last epoch
 
     ** GPU Options **

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-21 12:08:36
+-- @Last Modified time: 2017-12-21 13:04:15
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -52,7 +52,7 @@ local default_opt = {
     n_feature = 12,                 -- The number of feature planes, this should be in accordence with feature extraction function in util.lua
     activation = 'ELU',             -- The type of activation function, 'ReLu' | 'ELU'
     acti_param = 0.1,               -- Activation parameter, incase activation other than ReLU is used
-    value_weight = 1.0,             -- Loss = Policy Loss + weight * Value Loss
+    value_weight = 0.1,             -- Loss = Policy Loss + weight * Value Loss
 
     ---- Optimizer Options ----
     lr = 0.1,                       -- learning rate
