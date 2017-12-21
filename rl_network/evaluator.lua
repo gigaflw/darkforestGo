@@ -59,7 +59,11 @@ function get_latest_dev_model(current)
             filename = f
         end
     end
-    return paths.concat(opt.model_dir, filename), latest
+    if filename == nil then
+        return nil, latest
+    else
+        return paths.concat(opt.model_dir, filename), latest
+    end
 end
 
 local SIG_OK = tonumber(symbols.SIG_OK)

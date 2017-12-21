@@ -28,7 +28,9 @@ local opt = pl.lapp[[
     --epoch_per_ckpt     (default 1)
     --ckpt_dir           (default './rl.ckpt')      Where to store the checkpoints
     --ckpt_prefix        (default '')               Extra info to be prepended to checkpoint files
-    --model              (default './rl.ckpt/initial.params')
+    --model              (default './rl.ckpt/initial.params')   The initial model. Ignored if resume_ckpt is given.
+    --resume_ckpt        (default 'rl.latest.params')
+    --continue                                      Continue from the last epoch
 
     ** GPU Options **
     --use_gpu            (default true)             No use when there is no gpu devices
@@ -265,6 +267,9 @@ function callbacks.thread_switch(arg)
     end
 end
 
+-------------------------
+-- set default values
+-------------------------
 local resnet_utils = require 'resnet.utils'
 opt.use_gpu = opt.use_gpu and resnet_utils.have_gpu() -- only use gpu when there is one
 
@@ -280,17 +285,22 @@ if opt.dataset_name == '' then
     print("set dataset_name to "..opt.dataset_name)
 end
 
+local model
+if opt.model ~= '' then
+    model = torch.load(opt.model).net
+end
+-------------------------
+-- set default values ends
+-------------------------
+
 local Trainer = require 'rl_network.trainer'
+
+trainer = Trainer(model, opt, callbacks)
 if opt.mode == 'train' then
-    local model = torch.load(opt.model).net
-    trainer = Trainer(model, opt, callbacks)
     trainer:train(false)
 elseif opt.mode == 'hybrid' then
-    local model = torch.load(opt.model).net
-    trainer = Trainer(model, opt, callbacks)
     trainer:train(true)
 elseif opt.mode == 'generate' then
-    trainer = Trainer(nil, opt, callbacks)
     trainer:generate()
 end
 

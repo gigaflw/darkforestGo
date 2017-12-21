@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-19 19:50:51
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-21 11:18:55
+-- @Last Modified time: 2017-12-21 12:07:50
 
 local pl = require 'pl.import_into'()
 local utils = require 'utils.utils'
@@ -16,10 +16,15 @@ function Trainer:__init(net, opt, callbacks)
     self.opt = {}
     for k, v in pairs(opt) do self.opt[k] = v end 
 
-    self.net = net
+    self._epoch = 1
+    if opt.resume_ckpt ~= '' then
+        self:load(opt.resume_ckpt, opt.continue)
+    else
+        self.net = net
+    end
+
     self.player = RLPlayer(callbacks, opt)
     self.resnet = require 'resnet.rl_train'
-    self._epoch = 1
 end
 
 function Trainer:generate(dataset_name)
@@ -78,6 +83,7 @@ function Trainer:train(do_generate)
         and the training will use the dataset just generated.
         This requires to open `evaluator.lua` beforehand.
     ]]
+    assert(self.net, "Can't train without self.net")
     local opt = self.opt
     local res_opt = self.resnet.get_opt({
         log_file = opt.log_file, -- save to the same log file
@@ -161,6 +167,20 @@ function Trainer:save(epoch, filename)
     filename = self.opt.ckpt_prefix..filename
     torch.save(paths.concat(self.opt.ckpt_dir, filename), obj)
     self:log("checkpoint '"..filename.."' saved")
+end
+
+function Trainer:load(filename, continue)
+    local obj = torch.load(paths.concat(self.opt.ckpt_dir, filename))
+    self.net = obj.net
+
+    self:log("checkpoint '"..filename.."' loaded")
+    self:log("checkpoint epoch: "..obj.epoch)
+
+    if continue then
+        -- self.opt = obj.opt  -- should not be reloaded, saved opt are only for memo
+        self._epoch = obj.epoch + 1
+        self:log("Start from epoch "..self._epoch)
+    end
 end
 
 function Trainer:log(message)
