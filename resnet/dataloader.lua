@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 10:37:50
+-- @Last Modified time: 2017-12-22 20:52:41
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -31,7 +31,6 @@ local parse_and_put = argcheck{
     ]],
     {name='board', type='cdata', help='A `board.board` instance'},
     {name='game', type='sgfloader', help='A `sgfloader` instance, get by calling `sgf.parse()'},
-    -- {name='last_features', type='torch.FloatTensor', help='Feature from last iteration since history info is needed'},
     {name='augment', type='number', opt=true, help='[0, 7], the rotation style used for data augmentation, nil to disable'},
     call = function (board, game, do_estimate, augment)
         local x, y, player = sgf.parse_move(game.sgf[game.ply])
@@ -103,7 +102,6 @@ get_dataloader = argcheck{
         local game_idx = 0
         local board = CBoard.new()
 
-        local last_features = torch.FloatTensor(opt.n_feature, 19, 19) -- no use now
         local augment = nil -- augment style should be consistent during a single game
 
         if opt.debug then print("Dataloader in debug mode!") end
@@ -133,7 +131,6 @@ get_dataloader = argcheck{
             game.ply = 1
             CBoard.clear(board)
 
-            last_features:zero()
             if use_augment then
                 augment = torch.random(0, 7)  -- according to goutil.rotateMove and goutil.rotateTransform
             end
@@ -161,7 +158,6 @@ get_dataloader = argcheck{
             game.ply = game.ply + 1
 
             -- this function should also put the augmented stone onto the board
-            -- return parse_and_put(board, game, last_features, augment)
             return parse_and_put(board, game, augment)
         end
 

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-21 18:10:57
+-- @Last Modified time: 2017-12-22 20:53:17
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -26,14 +26,13 @@ local default_opt = {
     batch_size = 128,               -- The number of positions in each batch, 2048 in AlphaGo Zero thesis
     data_augment = true,            -- use rotation/reflection to augment dataset
     data_pool_size = -1,            -- Use a pool to buffer and shuffle the inputs better
-    do_estimate = true,             -- Estimate the score if the score is unclear
     verbose = false,                -- Whether print data loading detailsv
     debug = false,                  -- If given, no shuffling or augmentation will be performed
 
     ---- Training Options ----
     max_batches = -1,               -- -1 means each epoch will go through all data
-    epochs = 5,                     -- The number of epochs, in each of which all data will trained once
-    epoch_per_ckpt = 10,            -- The number of epochs per saving checkpoints
+    epochs = 3,                     -- The number of epochs, in each of which all data will trained once
+    epoch_per_ckpt = 1,             -- The number of epochs per saving checkpoints
     ckpt_dir = './resnet.ckpt',     -- Where to store the checkpoints
     ckpt_prefix = '',               -- Extra info to be prepended to checkpoint files
     resume_ckpt = '',               -- Whether resume some checkpoints before training
@@ -47,8 +46,6 @@ local default_opt = {
     use_gpu = utils.have_gpu(),      -- No use when there is no gpu devices
 
     ---- Network Options ----
-    n_res = 2,                      -- The number of residual blocks in the resnet, 19 or 39 according to the thesis
-    n_channel = 64,                 -- The number of channels in each residual block, 256 in the thesis
     n_feature = 12,                 -- The number of feature planes, this should be in accordence with feature extraction function in util.lua
     activation = 'ELU',             -- The type of activation function, 'ReLu' | 'ELU'
     acti_param = 0.1,               -- Activation parameter, incase activation other than ReLU is used
