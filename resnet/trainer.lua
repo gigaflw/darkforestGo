@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-20 13:42:39
+-- @Last Modified time: 2017-12-22 10:56:33
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -102,6 +102,7 @@ function Trainer:train()
 
     while self._epoch <= opt.epochs do
         local e = self._epoch
+        local epoch_loss = torch.zeros(4)
 
         for ind, inputs, labels in self.train_dataloader.iter(opt.max_batches) do
             labels = {labels.a, labels.z} -- array is needed for training, not table
@@ -140,14 +141,18 @@ function Trainer:train()
 
             -- time used for reading data: data_time
             -- time used for updating network: update_time - data_time
-            self:log(string.format(
-                "| Epoch %d [%02d/%02d], loss: %.4f/%.4f, acc: %.3f%%/%.3f%%, grad: %.4f/%.4f",
-                e, ind, opt.max_batches, policy_loss, value_loss, top1 * 100, top5 * 100, conv_grad * 100, bn_grad * 100
-            ))
+            epoch_loss = epoch_loss * ind / (ind + 1) + torch.FloatTensor({policy_loss, value_loss, top1, top5}) / (ind + 1)
+            if opt.verbose then
+                self:log(string.format(
+                    "| Epoch %d [%02d/%02d], loss: %.4f/%.4f, acc: %.3f%%/%.3f%%, grad: %.4f/%.4f",
+                    e, ind, opt.max_batches, policy_loss, value_loss, top1 * 100, top5 * 100, conv_grad * 100, bn_grad * 100
+                ))
+            end
             timer:reset()
         end
 
-        self:log(string.format("| Epoch %d ends in %.4fs", e, epoch_timer:time().real))
+        self:log(string.format("| Epoch %d ends in %.2fs, loss: %.4f/%.4f, acc: %.3f%%/%.3f%%",
+            e, epoch_timer:time().real, epoch_loss[1], epoch_loss[2], epoch_loss[3], epoch_loss[4]))
         ----------------------------
         -- save ckpt & test
         ----------------------------
@@ -155,7 +160,7 @@ function Trainer:train()
         if math.fmod(e, opt.epoch_per_ckpt) == 0 then
             self:save(e, string.format('e%04d.params', e))
         else
-            self:save(e, 'latest.params') -- save 'latest.params' every epoch
+            self:save(e, 'latest.params', true) -- save 'latest.params' every epoch, true means silent
         end
         if math.fmod(e, opt.epoch_per_test) == 0 then
             self:test()
@@ -253,7 +258,7 @@ function Trainer:copy_data(inputs, labels)
     end
 end
 
-function Trainer:save(epoch, filename)
+function Trainer:save(epoch, filename, silent)
     local obj = {
         epoch = epoch,
         net = self.net,
@@ -263,7 +268,9 @@ function Trainer:save(epoch, filename)
     obj.optim_state.dfdx = nil -- at the cost of losing momentum, shrink ckpt's size
     filename = self.opt.ckpt_prefix..filename
     torch.save(paths.concat(self.opt.ckpt_dir, filename), obj)
-    self:log("checkpoint '"..filename.."' saved")
+    if not silent then
+        self:log("checkpoint '"..filename.."' saved")
+    end
 end
 
 function Trainer:load(filename, continue)
