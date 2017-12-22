@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 21:08:04
+-- @Last Modified time: 2017-12-22 21:12:26
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -60,12 +60,12 @@ local default_opt = {
 
 local export = {}
 
-function export.save_sgf_to_dataset(dataset, name)
+function export.save_sgf_to_dataset(sgfs, name)
     local doc = [[
         Save an array of sgf strings into dataset file in the format of torchnet.IndexedDataset.
     ]]
     local writer = tnt.IndexedDatasetWriter(name..'.idx', name..'.bin', 'table')
-    for _, d in pairs(dataset) do if d then writer:add({sgf = d}) end end
+    for _, d in pairs(sgfs) do if d then writer:add({sgf = d}) end end
     writer:close()
 end
 

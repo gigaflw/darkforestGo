@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-19 19:50:51
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-21 13:15:16
+-- @Last Modified time: 2017-12-22 21:24:31
 
 local pl = require 'pl.import_into'()
 local utils = require 'utils.utils'
@@ -95,7 +95,7 @@ function Trainer:train(do_generate)
 
     local timer = torch.Timer()
 
-    while self._epoch < opt.epochs do
+    while self._epoch <= opt.epochs do
         local e = self._epoch
         local dataset_name
 

@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 21:06:00
+-- @Last Modified time: 2017-12-22 21:35:03
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -182,6 +182,7 @@ get_dataloader = argcheck{
             ind = ind + 1
             if (max_batches ~= -1 and ind > max_batches) or
                 (max_batches == -1 and game_cnt > dataset:size()) then  -- -1 means traverse all data
+                game_cnt = 0
                 return nil
             end
 
