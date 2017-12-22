@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 21:12:26
+-- @Last Modified time: 2017-12-22 23:00:08
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -18,7 +18,7 @@ local get_dataloader = require 'resnet.dataloader'
 -- the entry here should be exactly same with resnet.train.lua
 -- possible undefined behavior otherwise
 local default_opt = {
-    log_file = '',                  -- If given, log will be saved
+    log_file = './resnet.ckpt/log.txt',                  -- If given, log will be saved
 
     ---- Dataset Options ----
     dataset_dir = './dataset',
@@ -28,10 +28,11 @@ local default_opt = {
     data_pool_size = -1,            -- Use a pool to buffer and shuffle the inputs better
     verbose = false,                -- Whether print data loading detailsv
     debug = false,                  -- If given, no shuffling or augmentation will be performed
+    no_tie = false,
 
     ---- Training Options ----
-    max_batches = -1,               -- -1 means each epoch will go through all data
-    epochs = 3,                     -- The number of epochs, in each of which all data will trained once
+    max_batches = 20,               -- -1 means each epoch will go through all data
+    epochs = 300,                   -- The number of epochs, in each of which all data will trained once
     epoch_per_ckpt = 1,             -- The number of epochs per saving checkpoints
     ckpt_dir = './resnet.ckpt',     -- Where to store the checkpoints
     ckpt_prefix = '',               -- Extra info to be prepended to checkpoint files
