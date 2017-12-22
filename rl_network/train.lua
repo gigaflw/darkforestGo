@@ -287,7 +287,7 @@ if opt.dataset_name == '' then
 end
 
 local model
-if opt.model ~= '' then
+if opt.model ~= '' and opt.resume_ckpt == '' and opt.mode ~= 'generate' then
     model = torch.load(opt.model).net
 end
 -------------------------
