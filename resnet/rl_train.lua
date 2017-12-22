@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 20:53:17
+-- @Last Modified time: 2017-12-22 21:08:04
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.

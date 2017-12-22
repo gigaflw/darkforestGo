@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 10:56:33
+-- @Last Modified time: 2017-12-22 21:06:32
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -142,12 +142,12 @@ function Trainer:train()
             -- time used for reading data: data_time
             -- time used for updating network: update_time - data_time
             epoch_loss = epoch_loss * ind / (ind + 1) + torch.FloatTensor({policy_loss, value_loss, top1, top5}) / (ind + 1)
-            if opt.verbose then
+            -- if opt.verbose then
                 self:log(string.format(
                     "| Epoch %d [%02d/%02d], loss: %.4f/%.4f, acc: %.3f%%/%.3f%%, grad: %.4f/%.4f",
                     e, ind, opt.max_batches, policy_loss, value_loss, top1 * 100, top5 * 100, conv_grad * 100, bn_grad * 100
                 ))
-            end
+            -- end
             timer:reset()
         end
 

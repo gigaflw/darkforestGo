@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 20:52:41
+-- @Last Modified time: 2017-12-22 21:06:00
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -45,7 +45,7 @@ local parse_and_put = argcheck{
 
         local s = resnet_utils.board_to_features(board, player)
         local a = moveIdx
-        local z = winner == common.res_unknown and 0.5 or (winner == player and 1 or 0)
+        local z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
 
         if not is_pass then CBoard.play(board, x, y, player) end
 
@@ -90,21 +90,16 @@ get_dataloader = argcheck{
         local dataset_name, dataset_dir = paths.basename(dataset_path), paths.dirname(dataset_path)
         local dataset = tnt.IndexedDataset{fields = { dataset_name }, path = dataset_dir}
 
-        if opt.max_batches == -1 then
-            opt.max_batches = math.floor(dataset:size() * 200 / opt.batch_size) -- positions in each game is estimated to 200
-            assert(opt.max_batches > 0,  string.format(
-                "Too small a dataset with size %d against batch size %d", dataset:size(), opt.batch_size)
-            )
-            print("opt.max_batches is adapted to "..opt.max_batches)
-        end
-
         local game = nil
-        local game_idx = 0
+        local game_idx = 0          -- index of the current game
+        local game_cnt = 0          -- how many games have been loaded in total (include invalid ones)
         local board = CBoard.new()
 
         local augment = nil -- augment style should be consistent during a single game
 
         if opt.debug then print("Dataloader in debug mode!") end
+        print("Dataloader in "..opt.style.." mode")
+        if opt.max_batches == -1 then print("Dataloader will traverse all data") end
 
         -----------------------
         -- loading games
@@ -129,6 +124,7 @@ get_dataloader = argcheck{
             game_idx = idx
             game = sgf.parse(sgf_string, dataset_name)
             game.ply = 1
+            game_cnt = game_cnt + 1
             CBoard.clear(board)
 
             if use_augment then
@@ -136,7 +132,6 @@ get_dataloader = argcheck{
             end
 
             goutils.apply_handicaps(board, game)
-
             return game
         end
         local function load_random_game() return load_game(math.random(dataset:size())) end
@@ -185,7 +180,10 @@ get_dataloader = argcheck{
 
         local function _iter_batch(max_batches, ind)
             ind = ind + 1
-            if ind > max_batches then return nil end
+            if (max_batches ~= -1 and ind > max_batches) or
+                (max_batches == -1 and game_cnt > dataset:size()) then  -- -1 means traverse all data
+                return nil
+            end
 
             s:zero(); a:zero(); z:zero()
 

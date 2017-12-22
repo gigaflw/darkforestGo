@@ -1,7 +1,7 @@
 -- @Author: gigaflower
 -- @Date:   2017-11-21 07:34:01
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 10:33:44
+-- @Last Modified time: 2017-12-22 21:05:51
 
 local nn = require 'nn'
 local nninit = require 'nninit'
@@ -122,7 +122,7 @@ local function create_model(opt)
             :add(Linear(19*19, 256))
             :add(Acti())
             :add(Linear(256, 1))
-            :add(nn.Sigmoid())
+            :add(nn.Tanh())
     end
 
     ---------------------------
@@ -165,7 +165,7 @@ local function create_criterion(opt)
     --  loss = c:forward(pred, label)
     crit = nn.ParallelCriterion()
         :add(nn.CrossEntropyCriterion())
-        :add(nn.BCECriterion(), opt.value_weight)
+        :add(nn.MSECriterion(), opt.value_weight)
 
     if opt.use_gpu then
         require 'cunn'
