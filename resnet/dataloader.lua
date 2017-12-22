@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-21 12:56:50
+-- @Last Modified time: 2017-12-22 10:37:50
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -10,12 +10,6 @@ local common = require 'common.common'
 local CBoard = require 'board.board'
 local argcheck = require 'argcheck'
 local resnet_utils = require 'resnet.utils'
-
--- local om = require 'board.ownermap'
--- local dp_v2 = require 'board.pattern_v2'
--- local _owner_map = om.new()
--- local _def_policy = dp_v2.init('models/playout-model.bin', 'jp')
--- dp_v2.set_sample_params(_def_policy, -1, 0.125)
 
 local parse_and_put = argcheck{
     doc = [[
@@ -38,7 +32,6 @@ local parse_and_put = argcheck{
     {name='board', type='cdata', help='A `board.board` instance'},
     {name='game', type='sgfloader', help='A `sgfloader` instance, get by calling `sgf.parse()'},
     -- {name='last_features', type='torch.FloatTensor', help='Feature from last iteration since history info is needed'},
-    {name='do_estimate', type='boolean', help='Whether use default policy to estimate the score if there is no clear one'},
     {name='augment', type='number', opt=true, help='[0, 7], the rotation style used for data augmentation, nil to disable'},
     call = function (board, game, do_estimate, augment)
         local x, y, player = sgf.parse_move(game.sgf[game.ply])
@@ -51,21 +44,9 @@ local parse_and_put = argcheck{
 
         local winner = game:get_result_enum()
 
-        local score = tonumber(game:get_result():sub(3))
-        if score then
-            score = score * (winner == player and 1 or -1) / 361
-        end
-        -- elseif do_estimate then
-        --     score, _, _, _ = om.util_compute_final_score(
-        --         _owner_map, board, game:get_komi(), nil,
-        --         function (b, max_depth) return dp_v2.run(_def_policy, b, max_depth, false) end
-        --     )
-        --     score = score / 361
-        -- end
-
         local s = resnet_utils.board_to_features(board, player)
         local a = moveIdx
-        local z = score or (winner == common.res_unknown and 0 or (winner == player and 1 or -1))
+        local z = winner == common.res_unknown and 0.5 or (winner == player and 1 or 0)
 
         if not is_pass then CBoard.play(board, x, y, player) end
 
@@ -159,9 +140,6 @@ get_dataloader = argcheck{
 
             goutils.apply_handicaps(board, game)
 
-            if opt.verbose then
-                print(string.format('%d-th game is loaded, rounds: %d, augment: %s', idx, game:num_round(), augment))
-            end
             return game
         end
         local function load_random_game() return load_game(math.random(dataset:size())) end
@@ -174,13 +152,17 @@ get_dataloader = argcheck{
             local load = opt.debug and load_next_game or 
                 ({sample = load_random_game, traverse = load_next_game})[opt.style]
             if game == nil or game.ply - 1 >= game:num_round() then
-                repeat load() until game:num_round() > 0
+                repeat load() until game:num_round() > 0 and not (opt.no_tie and game:get_result_enum() == common.res_unknown)
+                if opt.verbose then
+                    print(string.format('%d-th game is loaded, rounds: %d, augment: %s', game_idx, game:num_round(), augment))
+                end
             end
+
             game.ply = game.ply + 1
 
             -- this function should also put the augmented stone onto the board
             -- return parse_and_put(board, game, last_features, augment)
-            return parse_and_put(board, game, opt.do_estimate, augment)
+            return parse_and_put(board, game, augment)
         end
 
         local data_pool = {}
