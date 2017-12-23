@@ -1881,7 +1881,10 @@ Move tree_search_pick_best(void *ctx, AllMoves *all_moves, const Board *verify_b
   // Prepare for next search.
   prepare_search_complete(s);
 
-  Move res = { .x = X(best_m), .y = Y(best_m), .m = best_m, .player = player, .win_rate = win_rate };
+  int total = best_child->parent->data.stats[best_child->parent_offset].total;
+  float win = best_child->parent->data.stats[best_child->parent_offset].black_win;
+  if (player == S_WHITE) win = total - win;
+  Move res = { .x = X(best_m), .y = Y(best_m), .m = best_m, .player = player, .win_rate = win_rate, .win_games = win, .total_games = total};
   return res;
 }
 
