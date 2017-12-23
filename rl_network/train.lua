@@ -43,7 +43,7 @@ local opt = pl.lapp[[
     --setup_board       (default "")            NO USE.Setup board. The argument is "sgfname moveto"
     --resign            (default true)          Whether support resign in rl_training.
     --resign_thre       (default 10)            If the opponent wins at least this much in fast rollout, we resign.
-    --resign_step       (default 19)            Check resign every this steps, make this odd to alternate
+    --resign_step       (default 20)            Check resign every this steps
 
     ** PlayoutV2 Options **
     --num_gpu           (default 1)

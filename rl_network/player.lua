@@ -222,9 +222,9 @@ function rl_player:genmove(player)
         io.stderr:write("Check whether we have screwed up...")
         local resign_thres = self.opt.resign_thres or 10
         local _, _, _, scores = self:score()
-        if (player == common.white and scores.min_score > resign_thres) or (player == common.black and scores.max_score < -resign_thres) then
+        if scores.min_score > resign_thres or scores.max_score < -resign_thres then
             return true, "resign", {
-                resign_side = player,
+                resign_side = scores.min_score > resign_thres and common.white or common.black,
                 score = scores.score,
                 min_score = scores.min_score,
                 max_score = scores.max_score
@@ -232,14 +232,12 @@ function rl_player:genmove(player)
         end
         if scores.min_score == scores.max_score and scores.max_score == scores.score then
             -- The estimation is believed to be absolutely correct.
-            if (player == common.white and scores.score > 0.5) or (player == common.black and scores.score < -0.5) then
-                return true, "resign", {
-                    resign_side = player,
-                    score = scores.score,
-                    min_score = scores.min_score,
-                    max_score = scores.max_score
-                }
-            end
+            return true, "resign", {
+                resign_side = scores.score > 0 and common.white or common.black,
+                score = scores.score,
+                min_score = scores.min_score,
+                max_score = scores.max_score
+            }
         end
     end
 
