@@ -218,9 +218,9 @@ function rl_player:genmove(player)
         end
     end
 
-    if self.opt.resign and self.b._ply >= 140 and self.b._ply % 20 == 1 then
+    if self.opt.resign and self.b._ply >= 140 and self.b._ply % self.opt.resign_step == 1 then
         io.stderr:write("Check whether we have screwed up...")
-        local resign_thres = 10
+        local resign_thres = self.opt.resign_thres or 10
         local _, _, _, scores = self:score()
         if (player == common.white and scores.min_score > resign_thres) or (player == common.black and scores.max_score < -resign_thres) then
             return true, "resign", {

@@ -14,7 +14,7 @@ local pl = require 'pl.import_into'()
 local opt = pl.lapp[[
     ** Trainer Options **
     --mode               (default 'train')          'generate' | 'train' | 'hybrid'
-    --log_file           (default '')               If given, log will be saved
+    --log_file           (default 'rl.ckpt/log.txt')               If given, log will be saved
     --dataset_dir        (default './dataset')      Where to save dataset
     --dataset_name       (default '')               Name for dataset, timestamp by default, ignored for hybrid mode
 
@@ -39,9 +39,11 @@ local opt = pl.lapp[[
 
     ** Player Options **
     --win_rate_thres    (default 0.0)           If the win rate is lower than that, resign.
-    --resign                                    Whether support resign in rl_training.
     --exec              (default "")            NO USE
     --setup_board       (default "")            NO USE.Setup board. The argument is "sgfname moveto"
+    --resign            (default true)          Whether support resign in rl_training.
+    --resign_thre       (default 10)            If the opponent wins at least this much in fast rollout, we resign.
+    --resign_step       (default 19)            Check resign every this steps, make this odd to alternate
 
     ** PlayoutV2 Options **
     --num_gpu           (default 1)
