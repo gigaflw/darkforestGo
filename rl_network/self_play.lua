@@ -201,10 +201,11 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
 
         local dcnn_opt = b._next_player == common.black and dcnn_opt1 or dcnn_opt2
         local x, y
-        if string.sub(dcnn_opt.codename, 1, 6) == "resnet" then
-            x, y = rl_utils.play_with_cnn(b, b._next_player, dcnn_opt.model)
-        else
+
+        if dcnn_opt.codename:match("darkfores.+") ~= nil or dcnn_opt.codename:match('df2') ~= nil then
             x, y = dcnn_utils.sample(dcnn_opt, b, b._next_player)
+        else
+            x, y = rl_utils.play_with_cnn(b, b._next_player, dcnn_opt.model)
         end
 
         --        print("!".."\t"..tostring(x).."\t"..tostring(y).. "\n")

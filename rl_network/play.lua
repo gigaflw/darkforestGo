@@ -10,17 +10,27 @@ local rl_utils = require 'rl_network.utils'
 local pl = require 'pl.import_into'()
 local utils = require 'utils.utils'
 
-utils.require_torch()
-utils.require_cutorch()
-
 local opt = pl.lapp[[
-    --codename1            (default "darkfores2")    Code name AI1 for models. If this is not empty then --input will be omitted.
-    --codename2            (default "resnet_18")    Code name AI2 for models.
+    --model1               (default "darkfores2")   Path name to AI2's model file. If this is not empty then --input will be omitted.
+    --model2               (default "")             Path name to AI2's model file.
     --sample_step          (default -1)             If the step of a game is less than the threshold, it is a bad sample.
     --resign                                        Whether support resign in rl_training.
     --num_games            (default 2)              The number of games to be playe.
     --pipe_path            (default "../../dflog")  Pipe path
+    --device               (default 3)
 ]]
+
+if opt.model1:match("darkfores.+") ~= nil or opt.model2:match("darkfores.+") ~= nil then
+    require 'cudnn'
+end
+
+if pl.path.exists("/dev/nvidiactl") then
+    require 'cunn'
+    require 'cutorch'
+    cutorch.setDevice(opt.device)
+else
+    require 'nn'
+end
 
 local dcnn_opt1, dcnn_opt2 = rl_utils.play_init(opt)
 

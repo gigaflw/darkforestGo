@@ -93,22 +93,22 @@ function rl_utils.play_init(opt)
 
     local opt1, opt2 = pl.tablex.deepcopy(opt), pl.tablex.deepcopy(opt)
 
-    opt1.input = common.codenames[opt.codename1].model_name
-    opt2.input = common.codenames[opt.codename2].model_name
+    function _set_opt(model_name, opt)
+        if common.codenames[model_name] ~= nil then
+            opt.input = common.codenames[model_name].model_name
+            opt.codename = model_name
+            opt.feature_type = model_name == "" and opt.feature_type or common.codenames[model_name].feature_type
+            opt.model = torch.load(opt.input)
+        else
+            opt.input = model_name
+            opt.codename = paths.basename(model_name):match('(.+)%..+')
+            opt.feature_type = opt.codename:match('df2') and 'extended' or 'custom'
+            opt.model = torch.load(opt.input).net
+        end
+    end
 
-    opt1.codename = opt.codename1
-    opt2.codename = opt.codename2
-
-    opt1.feature_type = opt.codename == "" and opt.feature_type or common.codenames[opt.codename1].feature_type
-    opt2.feature_type = opt.codename == "" and opt.feature_type or common.codenames[opt.codename2].feature_type
-
-    local model_name1 = opt1.input
-    local model_name2 = opt2.input
-
-    local model1 = opt1.codename == "darkfores2" and torch.load(model_name1) or torch.load(model_name1).net
-    local model2 = opt2.codename == "darkfores2" and torch.load(model_name2) or torch.load(model_name2).net
-
-    opt1.model, opt2.model = model1, model2
+    _set_opt(opt.model1, opt1)
+    _set_opt(opt.model2, opt2)
 
     return opt1, opt2
 end
