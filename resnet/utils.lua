@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-29 16:25:36
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-19 19:09:08
+-- @Last Modified time: 2017-12-26 22:06:43
 
 local pl = require 'pl.import_into'()
 
@@ -186,6 +186,7 @@ function utils.play(model, board, player, no_pass)
 
     _input_buffer[1] = input
 
+    moelf:evaluate()
     local output = model:forward(_input_buffer)
     output[1] = nn.SoftMax():forward(output[1]:float())
 
