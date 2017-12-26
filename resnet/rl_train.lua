@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 23:00:08
+-- @Last Modified time: 2017-12-26 10:02:13
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -22,10 +22,10 @@ local default_opt = {
 
     ---- Dataset Options ----
     dataset_dir = './dataset',
-    style = 'traverse',             -- 'sample': select samples at random; 'traverse': select data in order
+    style = 'sample',               -- 'sample': select samples at random; 'traverse': select data in order
     batch_size = 128,               -- The number of positions in each batch, 2048 in AlphaGo Zero thesis
     data_augment = true,            -- use rotation/reflection to augment dataset
-    data_pool_size = -1,            -- Use a pool to buffer and shuffle the inputs better
+    data_pool_size = 128,           -- Use a pool to buffer and shuffle the inputs better
     verbose = false,                -- Whether print data loading detailsv
     debug = false,                  -- If given, no shuffling or augmentation will be performed
     no_tie = false,
