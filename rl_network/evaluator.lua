@@ -14,6 +14,7 @@ threads.serialization('threads.sharedserialize')
 
 local common = require 'common.common'
 local utils = require 'utils.utils'
+local goutils = require 'utils.goutils'
 local symbols, _ = utils.ffi_include(paths.concat(common.script_path(), "../local_evaluator/cnn_local_exchanger.h"))
 local C = ffi.load(paths.concat(common.script_path(), "../libs/liblocalexchanger.so"))
 
@@ -21,13 +22,15 @@ local board = require 'board.board'
 local resnet_utils = require 'resnet.utils'
 local pkg = require 'rl_network.move_package'
 
+
 local opt = pl.lapp[[
     --pipe_path     (default "./pipes")
     --num_attempt   (default 10)            Number of attempt before wait_board gave up and return nil.
     --max_batch     (default 32)
     --use_dp        (default false)         Whether add to candidate move with default policy
     --model_dir     (default './rl.ckpt')   Where to find model file from
-    --model         (default './rl.ckpt/initial.params')
+    --model         (default 'models/df2.bin')
+    --model_type    (default 'df2')        'resnet' | 'df2', how to use the model
     --dev_model     (default 'rl.e(%d+).params')    The regex for target model file name to check whether we need to update the model
     --reload_time   (default 5)             Time in second to check whether there is a newer model we can load
 
@@ -50,6 +53,7 @@ else
 end
 if opt.verbose then utils.dbg_set() end
 
+---- Util Functions ----
 function get_latest_dev_model(current)
     local latest, filename = current, nil
     for f in paths.iterfiles(opt.model_dir) do
@@ -66,8 +70,25 @@ function get_latest_dev_model(current)
     end
 end
 
+function play(model, board, player)
+    if opt.model_type == 'resnet' then
+        -- for resnet models
+        local output = resnet_utils.play(model, board, player, true) -- true means no pass
+        return output[1], output[2] * 362
+    else
+        -- for df2.bin
+        local feature, named_features = goutils.extract_feature(board, player, {feature_type = 'extended', userank = true}, '9d') 
+        if opt.use_gpu then feature = feature:cuda() end
+        local output = model:forward(feature:view(1, table.unpack((#feature):totable())))
+        output = type(output) == 'table' and output[1] or output
+
+        return nn.SoftMax():forward(output:float()), 0 -- another value model is needed to give a value
+    end
+end
+
+---- Constants ----
 local SIG_OK = tonumber(symbols.SIG_OK)
-local NUM_POSSIBLE_MOVES = 362  -- 19*19 + pass move
+local NUM_POSSIBLE_MOVES = opt.model_type == 'resnet' and 362 or 361  -- 19*19 + pass move
 
 ---- Loading Model ----
 print("Loading model = " .. opt.model)
@@ -146,10 +167,10 @@ while true do
         local probs_sorted_k = pre_probs_sorted_k:sub(1, num_valid)
 
         for i = 1, num_valid do
-            local output = resnet_utils.play(model, boards[i], boards[i]._next_player, true) -- true means no pass
+            prob, value = play(model, boards[i], boards[i]._next_player)
 
-            probs[i] = output[1]  -- a 362-d probability distribution
-            values[i] = output[2] * 361 -- a float in [-1, 1], output of value network
+            probs[i] = prob  -- a 362-d probability distribution
+            values[i] = value -- a float in [-1, 1], output of value network
             pkg.t_received[block_ids[i]] = common.wallclock()
         end
 
