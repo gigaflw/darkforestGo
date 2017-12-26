@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 21:35:03
+-- @Last Modified time: 2017-12-26 21:42:56
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -13,8 +13,8 @@ local resnet_utils = require 'resnet.utils'
 
 local parse_and_put = argcheck{
     doc = [[
-        put the augmented (rotated) stone onto the board,
         get the input features and corresponding labels of a single play in a game,
+        then put the augmented (rotated) stone onto the board
         which position is parsed depends on `game.ply` attribute
         return: {
             s: the 12 x 19 x 19 feature tensor, input of the network
@@ -32,7 +32,7 @@ local parse_and_put = argcheck{
     {name='board', type='cdata', help='A `board.board` instance'},
     {name='game', type='sgfloader', help='A `sgfloader` instance, get by calling `sgf.parse()'},
     {name='augment', type='number', opt=true, help='[0, 7], the rotation style used for data augmentation, nil to disable'},
-    call = function (board, game, do_estimate, augment)
+    call = function (board, game, augment)
         local x, y, player = sgf.parse_move(game.sgf[game.ply])
         local is_pass = x == 0 and y == 0
 
@@ -47,7 +47,7 @@ local parse_and_put = argcheck{
         local a = moveIdx
         local z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
 
-        if not is_pass then CBoard.play(board, x, y, player) end
+        CBoard.play(board, x, y, player)
 
         return function()
             return { s = s, a = a, z = z }
@@ -141,18 +141,28 @@ get_dataloader = argcheck{
         -- iterator interface
         -----------------------
         local function _parse_next_position()
-            local load = opt.debug and load_next_game or 
-                ({sample = load_random_game, traverse = load_next_game})[opt.style]
-            if game == nil or game.ply - 1 >= game:num_round() then
-                repeat load() until game:num_round() > 0 and not (opt.no_tie and game:get_result_enum() == common.res_unknown)
+            -- load new game if necessary
+            if game == nil or game.ply > game:num_round() then  -- game.sgf[2] is the first, game.sgf[game:num_round()] the last
+                 local load = opt.debug and load_next_game or 
+                    ({sample = load_random_game, traverse = load_next_game})[opt.style]
+                repeat load() until game:num_round() > opt.min_ply and not (opt.no_tie and game:get_result_enum() == common.res_unknown)
                 if opt.verbose then
                     print(string.format('%d-th game is loaded, rounds: %d, augment: %s', game_idx, game:num_round(), augment))
                 end
             end
 
-            game.ply = game.ply + 1
+            while game.ply < game:num_round() do
+                local exceed_min_ply = game.ply > opt.min_ply
+                local skip_this_one = opt.dropout > math.random()
+                if exceed_min_ply and not skip_this_one then break end
 
-            -- this function should also put the augmented stone onto the board
+                game.ply = game.ply + 1
+                local x, y, player = sgf.parse_move(game.sgf[game.ply])
+                if augment ~= nil then x, y = goutils.rotateMove(x, y, augment) end
+                CBoard.play(board, x, y, player)
+            end
+
+            game.ply = game.ply + 1
             return parse_and_put(board, game, augment)
         end
 

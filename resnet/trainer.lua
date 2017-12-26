@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 21:06:32
+-- @Last Modified time: 2017-12-26 21:00:39
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -126,6 +126,7 @@ function Trainer:train()
             ----------------------------
             local update_time = timer:time().real
             local top1, top5 = self:accuracy(self.net.output, labels)
+            top1, top5 = top1 * 100, top5 * 100
             local loss, policy_loss, value_loss = self.crit.output, self.crit.criterions[1].output, self.crit.criterions[2].output
             function _get_grad()
                 local g_conv, g_bn = .0, .0
@@ -141,11 +142,11 @@ function Trainer:train()
 
             -- time used for reading data: data_time
             -- time used for updating network: update_time - data_time
-            epoch_loss = epoch_loss * ind / (ind + 1) + torch.FloatTensor({policy_loss, value_loss, top1, top5}) / (ind + 1)
+            epoch_loss = epoch_loss * (ind - 1) / ind + torch.FloatTensor({policy_loss, value_loss, top1, top5}) / ind
             -- if opt.verbose then
                 self:log(string.format(
                     "| Epoch %d [%02d/%02d], loss: %.4f/%.4f, acc: %.3f%%/%.3f%%, grad: %.4f/%.4f",
-                    e, ind, opt.max_batches, policy_loss, value_loss, top1 * 100, top5 * 100, conv_grad * 100, bn_grad * 100
+                    e, ind, opt.max_batches, policy_loss, value_loss, top1, top5, conv_grad * 100, bn_grad * 100
                 ))
             -- end
             timer:reset()

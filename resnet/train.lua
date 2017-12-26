@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 10:55:03
+-- @Last Modified time: 2017-12-26 21:00:31
 
 local doc = [[
     The following script should always be the entrance of the training procedure
@@ -17,6 +17,8 @@ local opt = pl.lapp[[
     --style              (default 'sample') 'sample': select samples at random; 'traverse': select data in order
     --data_augment       (default true)     use rotation/reflection to augment dataset
     --data_pool_size     (default 240)      Use a pool to buffer and shuffle the inputs better
+    --dropout            (default 0.0)      Discard certain proportion of positions (before entering data pool)
+    --min_ply            (default   0)      Skip the opening (with this length) of each game in dataset
     --no_tie             (default true)     Filter tie/win by time games from dataset (this deteriorate value network largely)
     --verbose                               Whether print data loading details
     --debug                                 If given, no shuffling or augmentation will be performed
