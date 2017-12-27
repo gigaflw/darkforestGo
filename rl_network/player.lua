@@ -179,6 +179,41 @@ function rl_player:score(show_more)
     return true, tostring(score), false, { score = score, min_score = min_score, max_score = max_score, num_dame = #stones.dames, livedead = livedead }
 end
 
+function rl_player:play(x, y, player)
+    if not self.board_initialized then error("Board should be initialized!!") end
+
+    if not verify_player(self.b, player) then
+        return false, "Invalid move!"
+    end
+
+    if x == nil then x, y = 0, 0 end
+
+    print(string.format("ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player))
+
+    if not board.play(self.b, x, y, player) then
+        io.stderr:write(string.format("Illegal move from the opponent! x = %d, y = %d, player = %d", x, y, player))
+        return false, "Invalid move"
+    end
+
+    self.cbs.move_receiver(x, y, player)
+    self.cbs.adjust_params_in_game(self.b)
+    self:add_to_sgf_history(x, y, player)
+
+    local move = goutils.compose_move_gtp(x, y)
+
+    if board.is_game_end(self.b) then
+        local _, _, _, scores = self:score()
+        return true, "resign", {
+            resign_side = 0,
+            score = scores.score,
+            min_score = scores.min_score,
+            max_score = scores.max_score
+        }
+    end
+
+    return true, move
+end
+
 function rl_player:g()
     return self:genmove(self.b._next_player)
 end

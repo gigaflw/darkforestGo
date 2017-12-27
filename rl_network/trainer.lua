@@ -1,10 +1,11 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-19 19:50:51
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-22 21:24:31
+-- @Last Modified time: 2017-12-27 09:10:58
 
 local pl = require 'pl.import_into'()
 local utils = require 'utils.utils'
+local rl_utils = require 'rl_network.utils'
 local common = require 'common.common'
 
 local RLPlayer = require 'rl_network.player'
@@ -115,6 +116,18 @@ function Trainer:train(do_generate)
         -- supervised training
         ----------------------------
         self.resnet.train_on_the_fly(self.net, dataset_name, dataset_name, res_opt)
+
+        local play_opt, opt1, opt2 = rl_utils.train_play_init(old_model, opt.model,
+            string.format("resnet_rl%04d", epoch - 1), string.format("resnet_rl%04d", epoch))
+
+        local old_win, new_win, differential = self_play.play(opt1, opt2, play_opt)
+
+        print(string.format('old_win = %d, new_win = %d, differential = %d', old_win, new_win, differential))
+
+        if differential > 0 then
+            opt.model = old_model  -- TODO: Save or give up the new model
+        end
+
         self.net = self:get_current_best_model()
 
         ----------------------------

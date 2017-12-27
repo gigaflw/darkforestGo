@@ -3,13 +3,13 @@
 -- Date: 2017/11/27
 --
 
-local utils = require("utils.utils")
-local common = require("common.common")
-local RLPlayer = require("rl_network.rl_player_mcts")
-local dcnn_utils = require("board.dcnn_utils")
-local rl_utils = require("rl_network.rl_utils")
-local resnet_rl = require("resnet.rl_train")
-local self_play = require("rl_network.self_play")
+local utils = require 'utils.utils'
+local common = require 'common.common'
+local RLPlayer = require 'rl_network.player'
+local dcnn_utils = require 'board.dcnn_utils'
+local rl_utils = require 'rl_network.utils'
+local resnet_rl = require 'resnet.rl_train'
+local self_play = require 'rl_network.self_play'
 
 
 local self_play_mcts = {}

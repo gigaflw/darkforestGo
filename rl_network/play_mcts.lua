@@ -3,19 +3,14 @@
 -- Date: 2017/11/27
 --
 
-package.path = package.path .. ';../?.lua'
+require '_torch_class_patch'
 
-require("_torch_class_patch")
-
-local playoutv2 = require('mctsv2.playout_multithread')
-local common = require("common.common")
-local utils = require("utils.utils")
+local playoutv2 = require 'mctsv2.playout_multithread'
+local common = require 'common.common'
+local utils = require 'utils.utils'
 local board = require 'board.board'
 local pl = require 'pl.import_into'()
-local self_play_mcts = require("rl_network.self_play_mcts")
-
-utils.require_torch()
-utils.require_cutorch()
+local self_play_mcts = require 'rl_network.self_play_mcts'
 
 local opt = pl.lapp[[
     --codename_mcts   (default "darkfores2")   Code name for models in mcts. If this is not empty then --input will be omitted.
@@ -28,7 +23,7 @@ local opt = pl.lapp[[
     --resign                                 Whether support resign in rl_training.
     --print_tree                             Whether print the search tree.
     --max_send_attempts (default 3)          #attempts to send to the server.
-    --pipe_path         (default "../../dflog") Pipe path
+    --pipe_path         (default "./pipes")  Pipe path
     --tier_name         (default "ai.go-evaluator") Tier name
     --server_type       (default "local")    We can choose "local" or "cluster". For open source version, for now "cluster" is not usable.
     --tree_to_json                           Whether we save the tree to json file for visualization. Note that pipe_path will be used.
@@ -51,7 +46,7 @@ local opt = pl.lapp[[
     --single_move_return                     Use single move return (When we only have one choice, return the move immediately)
     --expand_search_endgame                  Whether we expand the search in end game.
     --default_policy    (default "v2")       The default policy used. Could be "simple", "v2".
-    --default_policy_pattern_file (default "../models/playout-model.bin") The patter file
+    --default_policy_pattern_file (default "./models/playout-model.bin") The patter file
     --default_policy_temperature  (default 0.125)   The temperature we use for sampling.
     --online_model_alpha         (default 0.0)      Whether we use online model and its alpha
     --online_prior_mixture_ratio (default 0.0)      Online prior mixture ratio.
@@ -77,11 +72,12 @@ local opt = pl.lapp[[
     --device             (default 2)        which core to use on a multicore GPU environment
 ]]
 
-local util = require 'resnet.util'
+local util = require 'resnet.utils'
 opt.use_gpu = opt.use_gpu and util.have_gpu() -- only use gpu when there is one
 
 if opt.use_gpu then
     require 'cutorch'
+    require 'cunn'
     cutorch.setDevice(opt.device)
     print('use gpu device '..opt.device)
 end
@@ -238,9 +234,11 @@ local opt2 = {
 
     codename_mcts = opt.codename_mcts .. "_mcts",
     codename = opt.codename_normal,
-    feature_type = common.codenames[opt.codename_normal].feature_type,
-    model = opt.codename_normal == "darkfores2" and torch.load(common.codenames[opt.codename_normal].model_name)
-            or torch.load(common.codenames[opt.codename_normal].model_name).net,
+    -- feature_type = common.codenames[opt.codename_normal].feature_type,
+    -- model = opt.codename_normal == "darkfores2" and torch.load(common.codenames[opt.codename_normal].model_name)
+    --         or torch.load(common.codenames[opt.codename_normal].model_name).net,
+    feature_type = 'extended',
+    model = torch.load(opt.codename_normal).net,
 
     rule = opt.rule,
     win_rate_thres = opt.win_rate_thres,
