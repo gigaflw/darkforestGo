@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-12 11:00:34
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-27 08:41:58
+-- @Last Modified time: 2017-12-27 15:04:30
 
 local doc = [[
     API for reinforcement learning version of the training of the resnet.
@@ -26,7 +26,7 @@ local default_opt = {
     batch_size = 128,               -- The number of positions in each batch, 2048 in AlphaGo Zero thesis
     data_augment = true,            -- use rotation/reflection to augment dataset
     data_pool_size = 128,           -- Use a pool to buffer and shuffle the inputs better
-    dropout = 0.5,                  -- Discard certain proportion of positions (before entering data pool)
+    dropout = 0.9,                  -- Discard certain proportion of positions (before entering data pool)
     min_ply = 0,                    -- Skip the opening (with this length) of each game in dataset
     verbose = false,                -- Whether print data loading detailsv
     debug = false,                  -- If given, no shuffling or augmentation will be performed
@@ -34,7 +34,7 @@ local default_opt = {
 
     ---- Training Options ----
     max_batches = 20,               -- -1 means each epoch will go through all data
-    epochs = 300,                   -- The number of epochs, in each of which all data will trained once
+    epochs = 1,                     -- The number of epochs, in each of which all data will trained once
     epoch_per_ckpt = 1,             -- The number of epochs per saving checkpoints
     ckpt_dir = './resnet.ckpt',     -- Where to store the checkpoints
     ckpt_prefix = '',               -- Extra info to be prepended to checkpoint files

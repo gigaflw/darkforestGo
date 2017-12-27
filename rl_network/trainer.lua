@@ -1,12 +1,13 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-19 19:50:51
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-27 09:10:58
+-- @Last Modified time: 2017-12-27 15:05:55
 
 local pl = require 'pl.import_into'()
 local utils = require 'utils.utils'
 local rl_utils = require 'rl_network.utils'
 local common = require 'common.common'
+local self_play = require 'rl_network.self_play'
 
 local RLPlayer = require 'rl_network.player'
 
@@ -87,6 +88,7 @@ function Trainer:train(do_generate)
     assert(self.net, "Can't train without self.net")
     local opt = self.opt
     local initial_dataset = opt.initial_dataset
+    local opponent_net = torch.load('rl.ckpt/initial.params').net
     local res_opt = self.resnet.get_opt({
         log_file = opt.log_file, -- save to the same log file
         dataset_dir = opt.dataset_dir
@@ -115,18 +117,19 @@ function Trainer:train(do_generate)
         ----------------------------
         -- supervised training
         ----------------------------
+        self.net:training()
         self.resnet.train_on_the_fly(self.net, dataset_name, dataset_name, res_opt)
 
-        local play_opt, opt1, opt2 = rl_utils.train_play_init(old_model, opt.model,
-            string.format("resnet_rl%04d", epoch - 1), string.format("resnet_rl%04d", epoch))
+        --------------------------------
+        -- check the strength of the new model
+        --------------------------------
+        self.net:evaluate()
 
-        local old_win, new_win, differential = self_play.play(opt1, opt2, play_opt)
+        local play_opt, opt1, opt2 = rl_utils.train_play_init(self.net, opponent_net,
+            string.format("resnet_rl%04d", e), 'resnet_initial')
 
-        print(string.format('old_win = %d, new_win = %d, differential = %d', old_win, new_win, differential))
-
-        if differential > 0 then
-            opt.model = old_model  -- TODO: Save or give up the new model
-        end
+        local _, _, total_won = self_play.play(opt1, opt2, play_opt)
+        self:log(string.format('score = %d', total_won))
 
         self.net = self:get_current_best_model()
 

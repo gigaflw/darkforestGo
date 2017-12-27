@@ -10,44 +10,22 @@ local pl = require 'pl.import_into'()
 
 local rl_utils = {}
 
-function rl_utils.sample(probs, ply)
-    local score, index = torch.sort(probs, 1, true)
-    return index[1]
-end
-
 function rl_utils.play_with_cnn(b, player, net)
 
     local output = resnet_utils.play(net, b, player)
     local probs, win_rate = output[1], output[2]
-    local x, y, index
 
-    local max_iter, iter = 363, 1
-    while iter < max_iter do
-        index = rl_utils.sample(probs, b._ply)
+    local prob_sorted, index_sorted = torch.sort(probs, 1, true)
 
-        -- pass move
-        if index == 362 then
-            probs[index] = 0
-            iter = iter + 1
-        else
-            x, y = goutils.moveIdx2xy(index)
+    local x, y
+    for i = 1, 362 do
+        if index_sorted[i] ~= 362 then -- no pass move
+            x, y = goutils.moveIdx2xy(index_sorted[i])
 
             local check_res, comment = goutils.check_move(b, x, y, player)
-            if check_res then
-                break
-            else
-                probs[index] = 0
-                iter = iter + 1
-            end
+            if check_res then break else x, y = nil, nil end -- if is legal move
         end
     end
-
-    if iter >= max_iter then
-        x, y = 0, 0
-        print("not find a valid move in ", max_iter, " iterations ..")
-    end
-
---    print(tostring(b._ply) .. "\t" .. tostring(index) .. "\t" .. tostring(probs[index]))
 
     return x, y, win_rate
 end

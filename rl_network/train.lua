@@ -24,7 +24,7 @@ local opt = pl.lapp[[
     --sgf_dir            (default './dataset/sgf')  Where to save sgf files, (will not save if not given)
 
     *** for training ***
-    --epochs             (default 10)
+    --epochs             (default 30)
     --epoch_per_ckpt     (default 1)
     --ckpt_dir           (default './rl.ckpt')      Where to store the checkpoints
     --ckpt_prefix        (default '')               Extra info to be prepended to checkpoint files
