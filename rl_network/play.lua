@@ -13,6 +13,7 @@ local utils = require 'utils.utils'
 local opt = pl.lapp[[
     --model1               (default "darkfores2")   Path name to AI2's model file. If this is not empty then --input will be omitted.
     --model2               (default "")             Path name to AI2's model file.
+    --max_ply              (default 700)            End game in advance
     --sample_step          (default -1)             If the step of a game is less than the threshold, it is a bad sample.
     --resign                                        Whether support resign in rl_training.
     --num_games            (default 2)              The number of games to be playe.

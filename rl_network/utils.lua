@@ -42,19 +42,27 @@ end
 
 function rl_utils.train_play_init(old_model, new_model, old_model_name, new_model_name)
     local opt = {}
+    opt.shuffle_top_n = 300
     opt.handi = 0
     opt.komi = 7.5
     opt.num_games = 2
     opt.sample_step = -1
+    opt.max_ply = 400
+    opt.rank = '9d'
+    opt.userank = true
     opt.pipe_path = "../dflog"
+    opt.feature_type = 'old'
 
     local opt1, opt2 = pl.tablex.deepcopy(opt), pl.tablex.deepcopy(opt)
 
-    opt1.model = old_model
-    opt2.model = new_model
-
+    opt1.feature_type = old_model_name:match('df2') and 'extended' or 'custom'
+    opt2.feature_type = new_model_name:match('df2') and 'extended' or 'custom'
+   
     opt1.codename = old_model_name
     opt2.codename = new_model_name
+
+    opt1.model = old_model
+    opt2.model = new_model
 
     return opt, opt1, opt2
 end
@@ -71,7 +79,7 @@ function rl_utils.play_init(opt)
 
     local opt1, opt2 = pl.tablex.deepcopy(opt), pl.tablex.deepcopy(opt)
 
-    function _set_opt(model_name, opt)
+    local function _set_opt(model_name, opt)
         if common.codenames[model_name] ~= nil then
             opt.input = common.codenames[model_name].model_name
             opt.codename = model_name

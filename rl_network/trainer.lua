@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-12-19 19:50:51
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-27 15:05:55
+-- @Last Modified time: 2017-12-27 19:23:06
 
 local pl = require 'pl.import_into'()
 local utils = require 'utils.utils'
@@ -88,7 +88,7 @@ function Trainer:train(do_generate)
     assert(self.net, "Can't train without self.net")
     local opt = self.opt
     local initial_dataset = opt.initial_dataset
-    local opponent_net = torch.load('rl.ckpt/initial.params').net
+    local opponent_net = torch.load('models/df2.bin').net
     local res_opt = self.resnet.get_opt({
         log_file = opt.log_file, -- save to the same log file
         dataset_dir = opt.dataset_dir
@@ -126,7 +126,7 @@ function Trainer:train(do_generate)
         self.net:evaluate()
 
         local play_opt, opt1, opt2 = rl_utils.train_play_init(self.net, opponent_net,
-            string.format("resnet_rl%04d", e), 'resnet_initial')
+            string.format("resnet_rl%04d", e), 'df2')
 
         local _, _, total_won = self_play.play(opt1, opt2, play_opt)
         self:log(string.format('score = %d', total_won))

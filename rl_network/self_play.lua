@@ -225,7 +225,7 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
 
         --        board.show(b, 'last_move')
 
-        if board.is_game_end(b) then
+        if board.is_game_end(b) or b._ply > opt.max_ply then
             break
         end
 
