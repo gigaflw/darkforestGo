@@ -271,14 +271,14 @@ function self_play.play(opt1, opt2, opt)
                 optb.__stat.win = optb.__stat.win + 1
             elseif res.resign_side == common.black then
                 re = "W+Resign"
-                optb.__stat.win = optb.__stat.win + 1
+                optw.__stat.win = optw.__stat.win + 1
             else
                 if res.score > 0 then
                     re = string.format("B+%.1f", res.score)
                     optb.__stat.win = optb.__stat.win + 1
                 else
                     re = string.format("W+%.1f", -res.score)
-                    optb.__stat.win = optb.__stat.win + 1
+                    optw.__stat.win = optw.__stat.win + 1
                 end
             end
             local date = utils.get_current_date()
@@ -305,7 +305,7 @@ function self_play.play(opt1, opt2, opt)
     local win1, win2 = opt1.__stat.win, opt2.__stat.win
     local total_score = opt1.__stat.score
     opt1.__stat, opt2.__stat = nil, nil
-    return win_1, win_2, total_score
+    return win1, win2, total_score
 end
 
 function self_play.free()

@@ -36,6 +36,6 @@ end
 
 local dcnn_opt1, dcnn_opt2 = rl_utils.play_init(opt)
 
-local _, _, score = self_play.play(dcnn_opt1, dcnn_opt2, opt)
-print(string.format("model1 wins %.2f on average", score / opt.num_games))
+local win1, win2, score = self_play.play(dcnn_opt1, dcnn_opt2, opt)
+print(string.format("model1 wins %.2f%%, %.2f on average", win1/opt.num_games * 100, score / opt.num_games))
 self_play.free()

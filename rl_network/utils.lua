@@ -37,16 +37,17 @@ function rl_utils.play_with_cnn_prob(b, player, net)
     math.randomseed(os.time())
     local output = resnet_utils.play(net, b, player)
     local probs, win_rate = output[1], output[2]
+    local prob_sorted, index_sorted = torch.sort(probs, 1, true)
 
     local x, y
-    local rand = math.random()
+    local rand = math.random() * 0.7
     for i = 1, 361 do -- no pass move so do not check 362
-        if rand < probs[i] then
-            x, y = goutils.moveIdx2xy(i)
+        if rand < prob_sorted[i] then
+            x, y = goutils.moveIdx2xy(index_sorted[i])
             local check_res, comment = goutils.check_move(b, x, y, player)
             if check_res then break else x, y = nil, nil end -- if is legal move
         else
-            rand = rand - probs[i]
+            rand = rand - probs_sorted[i]
         end
     end
 
@@ -115,6 +116,7 @@ function rl_utils.play_init(opt)
             opt.feature_type = opt.codename:match('df2') and 'extended' or 'custom'
             opt.model = torch.load(opt.input).net
         end
+        if opt.model.net then opt.model = opt.model.net end
     end
 
     _set_opt(opt.model1, opt1)
