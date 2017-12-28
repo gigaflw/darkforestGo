@@ -175,7 +175,7 @@ function self_play.train(opt)
     self_play.free()
 end
 
-function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
+function self_play.play_one_game(b, opt_b, opt_w, opt)
     local moves = {}
 
     while true do
@@ -199,13 +199,13 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
             end
         end
 
-        local dcnn_opt = b._next_player == common.black and dcnn_opt1 or dcnn_opt2
+        local dcnn_opt = b._next_player == common.black and opt_b or opt_w
         local x, y
 
         if dcnn_opt.codename:match("darkfores.+") ~= nil or dcnn_opt.codename:match('df2') ~= nil then
             x, y = dcnn_utils.sample(dcnn_opt, b, b._next_player)
         else
-            x, y = rl_utils.play_with_cnn(b, b._next_player, dcnn_opt.model)
+            x, y = rl_utils.play_with_cnn(b, b._next_player, dcnn_opt.model, opt.at_random)
         end
 
         --        print("!".."\t"..tostring(x).."\t"..tostring(y).. "\n")
@@ -242,67 +242,50 @@ function self_play.play_one_game(b, dcnn_opt1, dcnn_opt2, opt)
     }
 end
 
-function self_play.play(dcnn_opt1, dcnn_opt2, opt)
+function self_play.play(opt1, opt2, opt)
     local b = board.new()
-    local win_1, win_2, differential = 0, 0, 0
+    local win_1, win_2, total_score = 0, 0, 0  -- total score is the total score won by dcnn_opt 1
+
+    opt1.__stat = { ind = 1, win = 0, score = 0 }
+    opt2.__stat = { ind = 2, win = 0, score = 0 }
 
     for batch = 1, opt.num_games do
         print(string.format("Play game: %d/%d", batch, opt.num_games))
         board.clear(b)
 
-        local opt1 = batch % 2 == 1 and dcnn_opt1 or dcnn_opt2
-        local opt2 = batch % 2 == 1 and dcnn_opt2 or dcnn_opt1
+        local optb = batch % 2 == 1 and opt1 or opt2
+        local optw = batch % 2 == 1 and opt2 or opt1
 
-        local res = self_play.play_one_game(b, opt1, opt2, opt)
+        local res = self_play.play_one_game(b, optb, optw, opt)
 
         if #res.moves <= opt.sample_step then
             print(string.format("Bad sample --- moves: %d, sample_step: %d", #res.moves, opt.sample_step))
         else
+            print(string.format("model%d wins %.2f", optb.__stat.ind, res.score))
+            optb.__stat.score = optb.__stat.score + res.score
+            optw.__stat.score = optw.__stat.score - res.score
+
             local re
             if res.resign_side == common.white then
                 re = "B+Resign"
-                if batch % 2 == 1 then
-                    win_1 = win_1 + 1
-                    differential = differential + 360
-                else
-                    win_2 = win_2 + 1
-                    differential = differential - 360
-                end
+                optb.__stat.win = optb.__stat.win + 1
             elseif res.resign_side == common.black then
                 re = "W+Resign"
-                if batch % 2 == 1 then
-                    win_2 = win_2 + 1
-                    differential = differential - 360
-                else
-                    win_1 = win_1 + 1
-                    differential = differential + 360
-                end
+                optb.__stat.win = optb.__stat.win + 1
             else
                 if res.score > 0 then
                     re = string.format("B+%.1f", res.score)
-                    if batch % 2 == 1 then
-                        win_1 = win_1 + 1
-                        differential = differential + res.score
-                    else
-                        win_2 = win_2 + 1
-                        differential = differential - res.score
-                    end
+                    optb.__stat.win = optb.__stat.win + 1
                 else
                     re = string.format("W+%.1f", -res.score)
-                    if batch % 2 == 1 then
-                        win_2 = win_2 + 1
-                        differential = differential + res.score
-                    else
-                        win_1 = win_1 + 1
-                        differential = differential - res.score
-                    end
+                    optb.__stat.win = optb.__stat.win + 1
                 end
             end
             local date = utils.get_current_date()
             local header = {
                 result = re,
-                player_b = opt1.codename,
-                player_w = opt2.codename,
+                player_b = optb.codename,
+                player_w = optw.codename,
                 date = date,
                 komi = opt.komi
             }
@@ -319,7 +302,10 @@ function self_play.play(dcnn_opt1, dcnn_opt2, opt)
         collectgarbage()
     end
 
-    return win_1, win_2, differential
+    local win1, win2 = opt1.__stat.win, opt2.__stat.win
+    local total_score = opt1.__stat.score
+    opt1.__stat, opt2.__stat = nil, nil
+    return win_1, win_2, total_score
 end
 
 function self_play.free()

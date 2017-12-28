@@ -14,6 +14,7 @@ local opt = pl.lapp[[
     --model1               (default "darkfores2")   Path name to AI2's model file. If this is not empty then --input will be omitted.
     --model2               (default "")             Path name to AI2's model file.
     --max_ply              (default 700)            End game in advance
+    --at_random                                     Select moves according to probability, in stead of choosing the move with highest prob
     --sample_step          (default -1)             If the step of a game is less than the threshold, it is a bad sample.
     --resign                                        Whether support resign in rl_training.
     --num_games            (default 2)              The number of games to be playe.
@@ -35,5 +36,6 @@ end
 
 local dcnn_opt1, dcnn_opt2 = rl_utils.play_init(opt)
 
-self_play.play(dcnn_opt1, dcnn_opt2, opt)
+local _, _, score = self_play.play(dcnn_opt1, dcnn_opt2, opt)
+print(string.format("model1 wins %.2f on average", score / opt.num_games))
 self_play.free()

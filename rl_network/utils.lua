@@ -10,7 +10,8 @@ local pl = require 'pl.import_into'()
 
 local rl_utils = {}
 
-function rl_utils.play_with_cnn(b, player, net)
+function rl_utils.play_with_cnn(b, player, net, with_prob)
+    if with_prob then return rl_utils.play_with_cnn_prob(b, player, net) end
 
     local output = resnet_utils.play(net, b, player)
     local probs, win_rate = output[1], output[2]
@@ -29,6 +30,29 @@ function rl_utils.play_with_cnn(b, player, net)
 
     return x, y, win_rate
 end
+
+
+function rl_utils.play_with_cnn_prob(b, player, net)
+    local doc = [[ select at random according to the probability given the net ]]
+    math.randomseed(os.time())
+    local output = resnet_utils.play(net, b, player)
+    local probs, win_rate = output[1], output[2]
+
+    local x, y
+    local rand = math.random()
+    for i = 1, 361 do -- no pass move so do not check 362
+        if rand < probs[i] then
+            x, y = goutils.moveIdx2xy(i)
+            local check_res, comment = goutils.check_move(b, x, y, player)
+            if check_res then break else x, y = nil, nil end -- if is legal move
+        else
+            rand = rand - probs[i]
+        end
+    end
+
+    return x, y, win_rate
+end
+
 
 function rl_utils.rl_init(opt)
     opt.handi = 0
