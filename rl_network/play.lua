@@ -20,6 +20,7 @@ local opt = pl.lapp[[
     --num_games            (default 2)              The number of games to be playe.
     --pipe_path            (default "../../dflog")  Pipe path
     --device               (default 3)
+    --sgf_dir              (default "../dataset/sgf") Where to save sgf
 ]]
 
 if opt.model1:match("darkfores.+") ~= nil or opt.model2:match("darkfores.+") ~= nil then

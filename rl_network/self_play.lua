@@ -292,10 +292,9 @@ function self_play.play(opt1, opt2, opt)
 
             local sgf_str = sgf.sgf_string(header, res.moves)
 
-            local footprint = string.format("%s-%s-%s__%s__%d", utils.get_signature(), header.player_b, header.player_w, utils.get_randString(6), b._ply)
-            local srcSGF = string.format("%s.sgf", footprint)
-            local f = assert(io.open(srcSGF, 'w'))
-
+            local filename = string.format("%s-%s-%s__%s__%d.sgf", utils.get_signature(), header.player_b, header.player_w, utils.get_randString(6), b._ply)
+            local filepath = paths.concat(opt.sgf_dir, filename)
+            local f = assert(io.open(filepath, 'w'))
             f:write(sgf_str)
             f:close()
         end
