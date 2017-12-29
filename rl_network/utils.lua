@@ -47,7 +47,7 @@ function rl_utils.play_with_cnn_prob(b, player, net)
             local check_res, comment = goutils.check_move(b, x, y, player)
             if check_res then break else x, y = nil, nil end -- if is legal move
         else
-            rand = rand - probs_sorted[i]
+            rand = rand - prob_sorted[i]
         end
     end
 

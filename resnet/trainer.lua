@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-26 21:00:39
+-- @Last Modified time: 2017-12-29 22:13:17
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -88,7 +88,7 @@ function Trainer:__init(net, crit, opt, train_dataloader, test_dataloader)
 end
 
 function Trainer:train()
-    opt = self.opt
+    local opt = self.opt
 
     local function _eval()
         -- the argument and return of this function is required by `torch.optim`
@@ -112,8 +112,8 @@ function Trainer:train()
             -- update parameters
             ----------------------------
             self.net:forward(self.inputs)
-            self.crit:forward(self.net.output, self.labels)
 
+            self.crit:forward(self.net.output, self.labels)
             self.net:zeroGradParameters()
 
             self.crit:backward(self.net.output, self.labels)
@@ -139,7 +139,6 @@ function Trainer:train()
                 return g_conv, g_bn
             end
             local conv_grad, bn_grad = _get_grad()
-
             -- time used for reading data: data_time
             -- time used for updating network: update_time - data_time
             epoch_loss = epoch_loss * (ind - 1) / ind + torch.FloatTensor({policy_loss, value_loss, top1, top5}) / ind
@@ -280,7 +279,7 @@ function Trainer:load(filename, continue)
     self.net = obj.net
 
     self:log("checkpoint '"..filename.."' loaded")
-    self:log("checkpoint epoch: "..obj.epoch)
+    self:log("checkpoint epoch: "..(obj.epoch or 'unknown'))
 
     if continue then
         -- self.opt = obj.opt  -- should not be reloaded, saved opt are only for memo
