@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-26 21:00:31
+-- @Last Modified time: 2018-01-01 20:01:26
 
 local doc = [[
     The following script should always be the entrance of the training procedure
@@ -22,6 +22,10 @@ local opt = pl.lapp[[
     --no_tie             (default true)     Filter tie/win by time games from dataset (this deteriorate value network largely)
     --verbose                               Whether print data loading details
     --debug                                 If given, no shuffling or augmentation will be performed
+    --dataset            (default 'dataset/kgs_test')
+    --dataset_test       (default 'dataset/kgs_train')
+
+    --no_pass            (default true)     No pass move in dataset AND the output of resnet (will be a 361-d vector instead of 362),
 
     ** Training Options  **
     --max_batches        (default 20)       The number of batches in each epoch (commonly 1 epoch means to go through all data, however here it is too large)
@@ -69,8 +73,8 @@ local Trainer = require 'resnet.trainer'
 local net = resnet.create_model(opt)
 local crit = resnet.create_criterion(opt)
 
-local train_dataloader = get_dataloader('./dataset/kgs_train', opt)
-local test_dataloader = get_dataloader('./dataset/kgs_test', opt)
+local train_dataloader = get_dataloader(opt.dataset, opt)
+local test_dataloader = opt.dataset_test and get_dataloader(opt.dataset_test, opt) or nil -- nil means no test
 
 local trainer = Trainer(net, crit, opt, train_dataloader, test_dataloader)
 if opt.test then

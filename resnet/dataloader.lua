@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-29 22:14:39
+-- @Last Modified time: 2018-01-01 20:01:08
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -32,9 +32,12 @@ local parse_and_put = argcheck{
     {name='board', type='cdata', help='A `board.board` instance'},
     {name='game', type='sgfloader', help='A `sgfloader` instance, get by calling `sgf.parse()'},
     {name='augment', type='number', opt=true, help='[0, 7], the rotation style used for data augmentation, nil to disable'},
-    call = function (board, game, augment)
+    {name='no_pass', type='boolean'},
+    call = function (board, game, augment, no_pass)
         local x, y, player = sgf.parse_move(game.sgf[game.ply])
         local is_pass = x == 0 and y == 0
+
+        if is_pass and no_pass then return false end
 
         if augment ~= nil then x, y = goutils.rotateMove(x, y, augment) end
 
@@ -43,15 +46,7 @@ local parse_and_put = argcheck{
 
         local winner = game:get_result_enum()
 
-        -- local s = resnet_utils.board_to_features(board, player)
-        local opt = {
-            usecpu = false,
-            feature_type = 'extended',
-            userank = true,
-            rank = '9d',
-        }
-
-        local s, _ = goutils.extract_feature(board, player, opt, opt.rank)
+        local s = resnet_utils.board_to_features(board, player)
         local a = moveIdx
         local z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
 
@@ -150,7 +145,7 @@ get_dataloader = argcheck{
         -----------------------
         local function _parse_next_position()
             -- load new game if necessary
-            if game == nil or game.ply > game:num_round() then  -- game.sgf[2] is the first, game.sgf[game:num_round()] the last
+            if game == nil or game.ply > game:num_round() - 3 then  -- game.sgf[2] is the first, game.sgf[game:num_round()] the last
                  local load = opt.debug and load_next_game or 
                     ({sample = load_random_game, traverse = load_next_game})[opt.style]
                 repeat load() until game:num_round() > opt.min_ply and not (opt.no_tie and game:get_result_enum() == common.res_unknown)
@@ -159,33 +154,38 @@ get_dataloader = argcheck{
                 end
             end
 
-            while game.ply < game:num_round() do
+            while game.ply < game:num_round() - 3 do
                 local exceed_min_ply = game.ply > opt.min_ply
                 local skip_this_one = opt.dropout > math.random()
+
                 if exceed_min_ply and not skip_this_one then break end
 
                 game.ply = game.ply + 1
-                local x, y, player = sgf.parse_move(game.sgf[game.ply])
-                if augment ~= nil then x, y = goutils.rotateMove(x, y, augment) end
                 CBoard.play(board, x, y, player)
             end
 
             game.ply = game.ply + 1
-            return parse_and_put(board, game, augment)
+            return parse_and_put(board, game, augment, opt.no_pass)
         end
 
         local data_pool = {}
         local pool_size = opt.debug and -1 or opt.data_pool_size
         local function _get_data_from_pool()
-            if pool_size == -1 then return _parse_next_position()() end
+            function _get_next_valid_cb()
+                local cb
+                repeat cb = _parse_next_position() until cb ~= false
+                return cb
+            end
+
+            if pool_size == -1 then return _get_next_valid_cb()() end
 
             if #data_pool == 0 then
-                for i = 1, pool_size do data_pool[i] = _parse_next_position() end
+                for i = 1, pool_size do data_pool[i] = _get_next_valid_cb() end
             end
 
             local choice = math.random(1, pool_size)
             local ret = data_pool[choice]()
-            data_pool[choice] = _parse_next_position()
+            data_pool[choice] = _get_next_valid_cb()
             return ret
         end
 
