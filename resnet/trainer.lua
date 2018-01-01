@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-22 15:35:40
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2017-12-29 22:13:17
+-- @Last Modified time: 2018-01-01 20:14:38
 
 local lfs = require 'lfs'
 local class = require 'class'
@@ -274,8 +274,7 @@ function Trainer:save(epoch, filename, silent)
 end
 
 function Trainer:load(filename, continue)
-    filename = filename or 'latest.params'
-    local obj = torch.load(paths.concat(self.opt.ckpt_dir, filename))
+    local obj = torch.load(filename)
     self.net = obj.net
 
     self:log("checkpoint '"..filename.."' loaded")

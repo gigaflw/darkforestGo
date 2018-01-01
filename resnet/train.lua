@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-23 14:25:44
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-01 20:01:26
+-- @Last Modified time: 2018-01-01 20:15:07
 
 local doc = [[
     The following script should always be the entrance of the training procedure
@@ -22,8 +22,8 @@ local opt = pl.lapp[[
     --no_tie             (default true)     Filter tie/win by time games from dataset (this deteriorate value network largely)
     --verbose                               Whether print data loading details
     --debug                                 If given, no shuffling or augmentation will be performed
-    --dataset            (default 'dataset/kgs_test')
-    --dataset_test       (default 'dataset/kgs_train')
+    --dataset            (default 'dataset/kgs_train')
+    --dataset_test       (default 'dataset/kgs_test')
 
     --no_pass            (default true)     No pass move in dataset AND the output of resnet (will be a 361-d vector instead of 362),
 

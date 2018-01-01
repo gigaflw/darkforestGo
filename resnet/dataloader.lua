@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2017-11-21 20:08:59
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-01 20:01:08
+-- @Last Modified time: 2018-01-01 20:18:10
 
 local tnt = require 'torchnet'
 local sgf = require 'utils.sgf'
@@ -46,7 +46,14 @@ local parse_and_put = argcheck{
 
         local winner = game:get_result_enum()
 
-        local s = resnet_utils.board_to_features(board, player)
+        local opt = {
+            usecpu = false,
+            feature_type = 'extended',
+            userank = true,
+            rank = '9d',
+        }
+        local s, _ = goutils.extract_feature(board, player, opt, opt.rank)
+        -- local s = resnet_utils.board_to_features(board, player)
         local a = moveIdx
         local z = winner == common.res_unknown and 0 or (winner == player and 1 or -1)
 
@@ -157,10 +164,11 @@ get_dataloader = argcheck{
             while game.ply < game:num_round() - 3 do
                 local exceed_min_ply = game.ply > opt.min_ply
                 local skip_this_one = opt.dropout > math.random()
-
                 if exceed_min_ply and not skip_this_one then break end
 
                 game.ply = game.ply + 1
+                local x, y, player = sgf.parse_move(game.sgf[game.ply])
+                if augment ~= nil then x, y = goutils.rotateMove(x, y, augment) end
                 CBoard.play(board, x, y, player)
             end
 
