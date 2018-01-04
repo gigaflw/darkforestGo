@@ -10,11 +10,13 @@ local sgfloader = require 'utils.sgf'
 local board = require 'board.board'
 local om = require 'board.ownermap'
 local pl = require 'pl.import_into'()
-local class = require 'class'
-local moves = {}
 
+local class = require 'class'
 local player = class("Player")
+
 function player:__init(callbacks, opt)
+    self.opt = pl.tablex.deepcopy(opt)
+
     self.b, self.board_initialized = board.new(), false
     self.cbs = callbacks
     self.name = "maim"
@@ -24,23 +26,12 @@ function player:__init(callbacks, opt)
     local rule = (opt and opt.rule == "jp") and board.japanese_rule or board.chinese_rule
     self.rule = opt.rule
 
-    --------------------------
-    -- Default policy setting
-    --------------------------
-    local default_opt = {
-        win_rate_thres = 0.0,
-        default_policy = 'v2',
-        default_policy_pattern_file = '../models/playout-model.bin',
-        default_policy_temperature = 0.125,
-        default_policy_sample_topn = -1,
-    }
+    if opt.mcts then self:_init_dp() end
+    self:clear_board()
+end
 
-    if opt then
-        self.opt = utils.add_if_nonexist(pl.tablex.deepcopy(opt), default_opt)
-    else
-        self.opt = default_opt
-    end
-
+function player:_init_dp()
+    -- init default policy
     local dp_simple = require 'board.default_policy'
     local dp_pachi = require 'pachi_tactics.moggy'
     local dp_v2 = require 'board.pattern_v2'
@@ -70,13 +61,11 @@ function player:mainloop()
 end
 
 function player:parse_command(line, mode)
-    if line == nil then
-        return false
-    end
+    if line == nil then return false end
     local content = pl.utils.split(line)
-    if #content == 0 then
-        return false
-    end
+
+    if #content == 0 then return false end
+
     local cmdid = ''
     if string.match(content[1], "%d+") then
         cmdid = table.remove(content, 1)
@@ -150,9 +139,7 @@ end
 
 function player:cmd_komi(komi_val)
     self.val_komi = tonumber(komi_val)
-    if self.cbs.set_komi then
-        self.cbs.set_komi(komi_val + self.val_handi)
-    end
+    if self.cbs.set_komi then self.cbs.set_komi(komi_val + self.val_handi) end
     return true
 end
 
@@ -165,7 +152,7 @@ function player:cmd_genmove(player)
 end
 
 function player:cmd_show_board()
-    board.show_fancy(self.b, "last_move")
+    board.show(self.b, "last_move")
     return true
 end
 --------------------------
@@ -238,9 +225,7 @@ function player:score(show_more)
         return false, "komi or handi is not set!"
     end
     -- Computing final score could be cpu hungry, so we need to stop computation if possible
-    if self.cbs.thread_switch then
-        self.cbs.thread_switch("off")
-    end
+    if self.cbs.thread_switch then self.cbs.thread_switch("off") end
 
     local score, livedead, territory, scores = om.util_compute_final_score(
         self.ownermap, self.b, self.val_komi + self.val_handi, nil,
@@ -266,56 +251,46 @@ function player:score(show_more)
         om.show_stones_prob(self.ownermap, common.white)
     end
 
-    if self.cbs.thread_switch then
-        self.cbs.thread_switch("on")
-    end
+    if self.cbs.thread_switch then self.cbs.thread_switch("on") end
     return true, tostring(score), false, { score = score, min_score = min_score, max_score = max_score, num_dame = #stones.dames, livedead = livedead }
 end
 
-local function verify_player(b, player)
-    if player ~= b._next_player then
-        local supposed_player = (b._next_player == common.white and 'W' or 'B')
-        local curr_player = (player == common.white and 'W' or 'B')
-        print(string.format("Wrong player! The player is supposed to be %s but actually is %s...", supposed_player, curr_player))
-        return false
-    else
-        return true
-    end
-end
-
-function player:play(x, y, player)
+function player:play(player, coord)
     if not self.board_initialized then error("Board should be initialized!!") end
+    local x, y, player = goutils.parse_move_gtp(coord, player)
 
-    if not verify_player(self.b, player) then
+    if not self:verify_player(player) then
         return false, "Invalid move!"
     end
 
     if x == nil then x, y = 0, 0 end
 
-    print(string.format("ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player))
+    print(string.format("* ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player))
 
     if not board.play(self.b, x, y, player) then
         io.stderr:write(string.format("Illegal move from the opponent! x = %d, y = %d, player = %d", x, y, player))
         return false, "Invalid move"
     end
 
-    self.cbs.move_receiver(x, y, player)
-    self.cbs.adjust_params_in_game(self.b)
+    if self.cbs.move_receiver then self.cbs.move_receiver(x, y, player) end
+    if self.cbs.adjust_params_in_game then self.cbs.adjust_params_in_game(self.b) end
     self:add_to_sgf_history(x, y, player)
 
-    local move = goutils.compose_move_gtp(x, y)
+    -- local move = goutils.compose_move_gtp(x, y)
 
-    if board.is_game_end(self.b) then
-        local _, _, _, scores = self:score()
-        return true, "resign", {
-            resign_side = 0,
-            score = scores.score,
-            min_score = scores.min_score,
-            max_score = scores.max_score
-        }
-    end
+    -- if board.is_game_end(self.b) then
+    --     local _, _, _, scores = self:score()
+    --     return true, "resign", {
+    --         resign_side = 0,
+    --         score = scores.score,
+    --         min_score = scores.min_score,
+    --         max_score = scores.max_score
+    --     }
+    -- end
 
-    return true, move
+    board.show(self.b, 'last_move')
+
+    return true
 end
 
 function player:g()
@@ -330,12 +305,12 @@ function player:genmove(player)
     if player == nil then
         return false, "Player should not be null"
     end
-    if not verify_player(self.b, player) then
+
+    player = (player:lower() == 'w' or player:lower() == 'white') and common.white or common.black
+    if not self:verify_player(player) then
         return false, "Invalid move!"
     end
 
-    -- Save the history.
-    table.insert(self.board_history, board.copyfrom(self.b))
 
     -- Do not pass until after 140 ply.
     -- After that, if enemy pass then we pass.
@@ -345,9 +320,7 @@ function player:genmove(player)
         if stats.num_dame < 5 then
             -- Play pass here.
             board.play(self.b, 0, 0, player)
-            if self.cbs.move_receiver then
-                self.cbs.move_receiver(0, 0, player)
-            end
+            if self.cbs.move_receiver then self.cbs.move_receiver(0, 0, player) end
             return true, "resign", {
                 resign_side = 0,
                 score = stats.score,
@@ -381,24 +354,27 @@ function player:genmove(player)
     end
 
     -- Call move predictor to get the move.
-    local xf, yf, win_rate = self.cbs.move_predictor(self.b, player)
+    local t_start = common.wallclock()
+    local x, y, win_rate = self.cbs.move_predictor(self.b, player)
 
-    if xf == nil then
+    if x == nil then
         io.stderr:write("Warning! No move is valid!")
-        -- Play pass here.
-        xf, yf = 0, 0
+        x, y = 0, 0 -- Play pass here.
     end
 
-    local move = goutils.compose_move_gtp(xf, yf)
+    local move = goutils.compose_move_gtp(x, y)
 
     -- Actual play this move
-    if not board.play(self.b, xf, yf, player) then
+    if not board.play(self.b, x, y, player) then
         error("Illegal move from move_predictor! move: " .. move)
     end
 
-    self.cbs.adjust_params_in_game(self.b)
-    self:add_to_sgf_history(xf, yf, player)
+    if self.cbs.adjust_params_in_game then self.cbs.adjust_params_in_game(self.b) end  -- FIXME: necessary?
+    self:add_to_sgf_history(x, y, player)
     self.win_rate = win_rate
+
+    board.show(self.b, 'last_move')
+    print("* Time spent in genmove " .. self.b._ply .. " : " ..  common.wallclock() - t_start)
 
     return true, move, win_rate
 end
@@ -418,17 +394,25 @@ end
 function player:clear_board()
     board.clear(self.b)
     self.board_initialized = true
-    self.board_history = { }
     self.sgf_history = { }
 
     self.val_komi = 6.5
     self.val_handi = 0
-    self.cbs.new_game()
+    if self.cbs.new_game then self.cbs.new_game() end
 end
 
 function player:quit()
-    if self.cbs.quit_func then
-        self.cbs.quit_func()
+    if self.cbs.quit_func then self.cbs.quit_func() end
+end
+
+function player:verify_player(player)
+    if player ~= self.b._next_player then
+        local supposed_player = (self.b._next_player == common.white and 'W' or 'B')
+        local curr_player = (player == common.white and 'W' or 'B')
+        print(string.format("Wrong player! The player is supposed to be %s but actually is %s...", supposed_player, curr_player))
+        return false
+    else
+        return true
     end
 end
 --------------------------

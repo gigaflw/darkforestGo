@@ -83,7 +83,7 @@ function self_play_mcts.play_one_step(opt, b)
         x, y = dcnn_utils.sample(opt, b, b._next_player)
     end
 
-    return rl_player:play(x, y, b._next_player)
+    return rl_player:play(x, y, b._next_player) -- this will not work
 end
 
 function self_play_mcts.play_mcts(callbacks, opt)
