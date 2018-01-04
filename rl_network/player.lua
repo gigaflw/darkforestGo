@@ -13,26 +13,20 @@ local pl = require 'pl.import_into'()
 local class = require 'class'
 local moves = {}
 
-local function verify_player(b, player)
-    if player ~= b._next_player then
-        local supposed_player = (b._next_player == common.white and 'W' or 'B')
-        local curr_player = (player == common.white and 'W' or 'B')
-        print(string.format("Wrong player! The player is supposed to be %s but actually is %s...", supposed_player, curr_player))
-        return false
-    else
-        return true
-    end
-end
-
--- Init the RLPlayer
-local rl_player = class("RLPlayerMCTS")
-function rl_player:__init(callbacks, opt)
+local player = class("Player")
+function player:__init(callbacks, opt)
     self.b, self.board_initialized = board.new(), false
     self.cbs = callbacks
-    self.name = "rl_player_MCTS"
+    self.name = "maim"
     self.version = "1.0"
     self.ownermap = om.new()
-    -- Opt
+
+    local rule = (opt and opt.rule == "jp") and board.japanese_rule or board.chinese_rule
+    self.rule = opt.rule
+
+    --------------------------
+    -- Default policy setting
+    --------------------------
     local default_opt = {
         win_rate_thres = 0.0,
         default_policy = 'v2',
@@ -46,9 +40,6 @@ function rl_player:__init(callbacks, opt)
     else
         self.opt = default_opt
     end
-
-    local rule = (opt and opt.rule == "jp") and board.japanese_rule or board.chinese_rule
-    self.rule = opt.rule
 
     local dp_simple = require 'board.default_policy'
     local dp_pachi = require 'pachi_tactics.moggy'
@@ -65,11 +56,126 @@ function rl_player:__init(callbacks, opt)
         self.dp = dp_simple
         self.def_policy = self.dp.new(rule)
     end
-
-    io.stderr:write("RLPlayerMCTS")
 end
 
-function rl_player:check_resign()
+function player:mainloop()
+    while true do
+        local line = io.read()
+        if line == nil then break end
+        local ret, quit = self:parse_command(line)
+        print(ret..'\n\n')
+        io.flush()
+        if quit == true then break end
+    end
+end
+
+function player:parse_command(line, mode)
+    if line == nil then
+        return false
+    end
+    local content = pl.utils.split(line)
+    if #content == 0 then
+        return false
+    end
+    local cmdid = ''
+    if string.match(content[1], "%d+") then
+        cmdid = table.remove(content, 1)
+    end
+
+    local command = table.remove(content, 1)
+    local successful, outputstr, quit
+
+    if type(player['cmd_'..command]) ~= 'function' then
+        print("Warning: Ignoring unknown command - " .. line)
+    else
+        successful, outputstr, quit = player['cmd_'..command](self, unpack(content))
+    end
+    local ret
+    if successful then
+        if outputstr == nil then outputstr = '' end
+        ret = string.format("=%s %s\n", cmdid, outputstr)
+    else
+        ret = string.format("?%s ??? %s\n", cmdid, outputstr)
+    end
+    return ret, quit
+end
+
+--------------------------
+-- gtp commands
+--------------------------
+function player:cmd_protocol_version()
+    return true, '2'
+end
+
+function player:cmd_name()
+    return true, self.name
+end
+
+function player:cmd_version()
+    return true, self.version
+end
+
+function player:cmd_known_command(cmd)
+    return true, type(player['cmd_'..cmd]) == 'function' and "true" or "false"
+end
+
+function player:cmd_list_commands()
+    local cmds = {}
+    for name, _ in pairs(getmetatable(player)) do
+        if name:sub(1, 4) == 'cmd_' then
+            table.insert(cmds, name:sub(5))
+        end
+    end
+    return true, table.concat(cmds, '\n')
+end
+
+function player:cmd_quit()
+    self:quit()
+    return true, "Byebye!", true
+end
+
+function player:cmd_boardsize(board_size)
+    if board_size == nil then return false end
+    local s = tonumber(board_size)
+    if s ~= board.get_board_size(b) then
+        error(string.format("Board size %d is not supported!", s))
+    end
+    return true
+end
+
+function player:cmd_clear_board()
+    self:clear_board()
+    return true
+end
+
+function player:cmd_komi(komi_val)
+    self.val_komi = tonumber(komi_val)
+    if self.cbs.set_komi then
+        self.cbs.set_komi(komi_val + self.val_handi)
+    end
+    return true
+end
+
+function player:cmd_play(x, y, player)
+    return self:play(x, y, player)  -- todo: clean this
+end
+
+function player:cmd_genmove(player)
+    return self:genmove(player)  -- todo: clean this
+end
+
+function player:cmd_show_board()
+    board.show_fancy(self.b, "last_move")
+    return true
+end
+--------------------------
+-- gtp commands end
+--------------------------
+
+--------------------------
+-- Util functions
+--------------------------
+function player:check_resign()
     -- If the score is beyond the threshold, then one side will resign.
     local thres = 10
 
@@ -97,12 +203,12 @@ function rl_player:check_resign()
 end
 
 -- Write sgf
-function rl_player:add_to_sgf_history(x, y, player)
+function player:add_to_sgf_history(x, y, player)
     table.insert(self.sgf_history, { x, y, player })
 end
 
 -- Save the current history to sgf.
-function rl_player:save_sgf(filename, re, pb, pw, is_save)
+function player:save_sgf(filename, re, pb, pw, is_save)
     local date = utils.get_current_date()
     local header = {
         komi = self.val_komi,
@@ -127,20 +233,7 @@ function rl_player:save_sgf(filename, re, pb, pw, is_save)
     return res
 end
 
-function rl_player:clear_board()
-    board.clear(self.b)
-    self.board_initialized = true
-    self.board_history = { }
-    self.sgf_history = { }
-
-    self.val_komi = 6.5
-    self.val_handi = 0
-    self.cbs.new_game()
-
-    return true
-end
-
-function rl_player:score(show_more)
+function player:score(show_more)
     if self.val_komi == nil or self.val_handi == nil then
         return false, "komi or handi is not set!"
     end
@@ -179,7 +272,18 @@ function rl_player:score(show_more)
     return true, tostring(score), false, { score = score, min_score = min_score, max_score = max_score, num_dame = #stones.dames, livedead = livedead }
 end
 
-function rl_player:play(x, y, player)
+local function verify_player(b, player)
+    if player ~= b._next_player then
+        local supposed_player = (b._next_player == common.white and 'W' or 'B')
+        local curr_player = (player == common.white and 'W' or 'B')
+        print(string.format("Wrong player! The player is supposed to be %s but actually is %s...", supposed_player, curr_player))
+        return false
+    else
+        return true
+    end
+end
+
+function player:play(x, y, player)
     if not self.board_initialized then error("Board should be initialized!!") end
 
     if not verify_player(self.b, player) then
@@ -214,11 +318,11 @@ function rl_player:play(x, y, player)
     return true, move
 end
 
-function rl_player:g()
+function player:g()
     return self:genmove(self.b._next_player)
 end
 
-function rl_player:genmove(player)
+function player:genmove(player)
 
     if not self.board_initialized then
         return false, "Board should be initialized!!"
@@ -299,7 +403,7 @@ function rl_player:genmove(player)
     return true, move, win_rate
 end
 
-function rl_player:final_score()
+function player:final_score()
     local res, _, _, stats = self:score()
 
     if not res then
@@ -311,11 +415,24 @@ function rl_player:final_score()
     return true, s
 end
 
-function rl_player:quit()
+function player:clear_board()
+    board.clear(self.b)
+    self.board_initialized = true
+    self.board_history = { }
+    self.sgf_history = { }
+
+    self.val_komi = 6.5
+    self.val_handi = 0
+    self.cbs.new_game()
+end
+
+function player:quit()
     if self.cbs.quit_func then
         self.cbs.quit_func()
     end
-    return true, "Byebye!", true
 end
+--------------------------
+-- Util function ends
+--------------------------
 
-return rl_player
+return player
