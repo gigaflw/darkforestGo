@@ -143,11 +143,14 @@ function player:cmd_komi(komi_val)
     return true
 end
 
-function player:cmd_play(x, y, player)
-    return self:play(x, y, player)  -- todo: clean this
+function player:cmd_play(player, coord)
+    local x, y, player = goutils.parse_move_gtp(coord, player)
+    if x == nil then x, y = 0, 0 end
+    return self:play(player, x, y)  -- todo: clean this
 end
 
 function player:cmd_genmove(player)
+    player = (player:lower() == 'w' or player:lower() == 'white') and common.white or common.black
     return self:genmove(player)  -- todo: clean this
 end
 
@@ -255,15 +258,12 @@ function player:score(show_more)
     return true, tostring(score), false, { score = score, min_score = min_score, max_score = max_score, num_dame = #stones.dames, livedead = livedead }
 end
 
-function player:play(player, coord)
+function player:play(player, x, y)
     if not self.board_initialized then error("Board should be initialized!!") end
-    local x, y, player = goutils.parse_move_gtp(coord, player)
 
     if not self:verify_player(player) then
         return false, "Invalid move!"
     end
-
-    if x == nil then x, y = 0, 0 end
 
     print(string.format("* ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player))
 
@@ -306,7 +306,6 @@ function player:genmove(player)
         return false, "Player should not be null"
     end
 
-    player = (player:lower() == 'w' or player:lower() == 'white') and common.white or common.black
     if not self:verify_player(player) then
         return false, "Invalid move!"
     end
@@ -374,7 +373,7 @@ function player:genmove(player)
     self.win_rate = win_rate
 
     board.show(self.b, 'last_move')
-    print("* Time spent in genmove " .. self.b._ply .. " : " ..  common.wallclock() - t_start)
+    print(string.format("* Time spent in genmove %d : %.3fs", self.b._ply, common.wallclock() - t_start))
 
     return true, move, win_rate
 end

@@ -71,7 +71,7 @@ local opt = pl.lapp[[
     --default_policy    (default "v2")          The default policy used. Could be "simple", "v2".
     --default_policy_pattern_file (default "models/playout-model.bin") The patter file
     --default_policy_temperature  (default 0.125)   The temperature we use for sampling.
-    --sample_topn       (default -1)            If use v2, topn we should sample..
+    --default_policy_sample_topn       (default -1)            If use v2, topn we should sample..
 
     *** backpropagation ***
     --use_cnn_final_score                             Whether we use CNN final score.

@@ -74,7 +74,7 @@ function play(model, board, player)
     if opt.model_type == 'resnet' then
         -- for resnet models
         local output = resnet_utils.play(model, board, player, true) -- true means no pass
-        return output[1], output[2] * 362
+        return output[1], output[2] * NUM_POSSIBLE_MOVES
     else
         -- for df2.bin
         local feature, named_features = goutils.extract_feature(board, player, {feature_type = 'extended', userank = true}, '9d') 
@@ -88,7 +88,7 @@ end
 
 ---- Constants ----
 local SIG_OK = tonumber(symbols.SIG_OK)
-local NUM_POSSIBLE_MOVES = opt.model_type == 'resnet' and 362 or 361  -- 19*19 + pass move
+local NUM_POSSIBLE_MOVES = 361
 
 ---- Loading Model ----
 print("Loading model = " .. opt.model)
@@ -169,7 +169,7 @@ while true do
         for i = 1, num_valid do
             prob, value = play(model, boards[i], boards[i]._next_player)
 
-            probs[i] = prob  -- a 362-d probability distribution
+            probs[i] = prob  -- a 361-d probability distribution
             values[i] = value -- a float in [-1, 1], output of value network
             pkg.t_received[block_ids[i]] = common.wallclock()
         end

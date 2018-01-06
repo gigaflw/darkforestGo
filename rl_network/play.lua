@@ -12,8 +12,15 @@ local rl_utils = require 'rl_network.utils'
 local utils = require 'utils.utils'
 
 local opt = pl.lapp[[
-    --model1               (default "")             Path name to AI2's model file. If this is not empty then --input will be omitted.
-    --model2               (default "")             Path name to AI2's model file.
+    --mode                 (default 'gtp')          'gtp' or 'self'
+    --mcts                 If given, use mcts search (local evaluator required),
+                            in this case, which model to use is decided by the options in 'evaluator.lua'
+                            otherwise, use the raw output of the network
+
+    --model1               (default "")             Path name to a model file
+    --model2               (default "")             Path name to a model file
+                                                    No use if '--mcts' is given, in which case the used model is decided by 'evaluator.lua'
+
     --max_ply              (default 1000)           End game in advance
     --at_random                                     Select moves according to probability, in stead of choosing the move with highest prob
     --sample_step          (default -1)             If the step of a game is less than the threshold, it is a bad sample.
@@ -22,11 +29,6 @@ local opt = pl.lapp[[
     --pipe_path            (default "./pipes")  Pipe path
     --device               (default 3)
     --sgf_dir              (default ".") Where to save sgf
-
-    --mode                 (default 'gtp')      'gtp' or 'self'. model2 will be ignored if 'gtp'
-    --mcts                 If given, use mcts search (local evaluator required),
-                            in this case, which model to use is decided by the options in 'evaluator.lua'
-                            otherwise, use the raw output of the network
 
     ************************ MCTS Options (no use if --mcts is not given) ****************************
 
@@ -64,7 +66,7 @@ local opt = pl.lapp[[
     --default_policy    (default "v2")          The default policy used. Could be "simple", "v2".
     --default_policy_pattern_file (default "models/playout-model.bin") The patter file
     --default_policy_temperature  (default 0.125)   The temperature we use for sampling.
-    --sample_topn       (default -1)            If use v2, topn we should sample..
+    --default_policy_sample_topn  (default -1)            If use v2, topn we should sample..
 
     *** backpropagation ***
     --use_cnn_final_score                             Whether we use CNN final score.
