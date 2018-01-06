@@ -28,6 +28,7 @@ function player:__init(callbacks, opt)
 
     if opt.mcts then self:_init_dp() end
     self:clear_board()
+    print("maim "..self.version.." on")
 end
 
 function player:_init_dp()

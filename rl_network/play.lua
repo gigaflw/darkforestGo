@@ -19,6 +19,7 @@ local opt = pl.lapp[[
 
     --model1               (default "")             Path name to a model file
     --model2               (default "")             Path name to a model file
+    --model_type           (default "df2")          'df2' or 'resnet'
                                                     No use if '--mcts' is given, in which case the used model is decided by 'evaluator.lua'
 
     --max_ply              (default 1000)           End game in advance
@@ -126,7 +127,7 @@ else
     callbacks = {
         move_predictor = function (board, player)
             assert(player == board._next_player)
-            x, y, win_rate = rl_utils.play_with_cnn(board, player, model, opt.at_random)
+            x, y, win_rate = rl_utils.play_with_cnn(board, player, model, opt.at_random, opt.model_type)
             return x, y, win_rate
         end
     }

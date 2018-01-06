@@ -10,50 +10,60 @@ local pl = require 'pl.import_into'()
 
 local rl_utils = {}
 
-function rl_utils.play_with_cnn(b, player, net, with_prob)
-    if with_prob then return rl_utils.play_with_cnn_prob(b, player, net) end
 
-    local output = resnet_utils.play(net, b, player)
-    local probs, win_rate = output[1], output[2]
-
-    local prob_sorted, index_sorted = torch.sort(probs, 1, true)
-
-    local x, y
-    for i = 1, 362 do
-        if index_sorted[i] ~= 362 then -- no pass move
-            x, y = goutils.moveIdx2xy(index_sorted[i])
-
-            local check_res, comment = goutils.check_move(b, x, y, player)
-            if check_res then break else x, y = nil, nil end -- if is legal move
-        end
-    end
-
-    return x, y, win_rate
-end
-
-
-function rl_utils.play_with_cnn_prob(b, player, net)
-    local doc = [[ select at random according to the probability given the net ]]
-    math.randomseed(os.time())
-    local output = resnet_utils.play(net, b, player)
-    local probs, win_rate = output[1], output[2]
-    local prob_sorted, index_sorted = torch.sort(probs, 1, true)
-
-    local x, y
-    local rand = math.random() * 0.7
-    for i = 1, 361 do -- no pass move so do not check 362
-        if rand < prob_sorted[i] then
-            x, y = goutils.moveIdx2xy(index_sorted[i])
-            local check_res, comment = goutils.check_move(b, x, y, player)
-            if check_res then break else x, y = nil, nil end -- if is legal move
+function rl_utils.play_with_cnn(b, player, net, with_prob, model_type)
+    local function _play(model_type)
+        if model_type == 'resnet' then
+            return resnet_utils.play(net, b, player)
+        elseif model_type == 'df2' then
+            local dcnn_opt = {
+                sample_step = -1,
+                shuffle_top_n = -1,
+                rank = '9d',
+                userank = true,
+                handi = 0,
+                komi = 7.5,
+                feature_type = 'extended',
+                model = net,
+                usecpu = true,
+            }
+            local feature, _ = goutils.extract_feature(b, player, dcnn_opt, '9d')
+            local output = net:forward(feature:resize(1, table.unpack((#feature):totable())))
+            output[1]:exp():resize(361)
+            return output
         else
-            rand = rand - prob_sorted[i]
+            error('unkown model type :', model_type)
+        end
+    end
+
+    local output = _play(model_type)
+    local probs, win_rate = output[1], output[2]
+    local prob_sorted, index_sorted = torch.sort(probs, 1, true)
+
+    local x, y
+    if with_prob then
+        local rand = math.random() * 0.7
+        for i = 1, 361 do -- no pass move so do not check 362
+            if rand < prob_sorted[i] then
+                x, y = goutils.moveIdx2xy(index_sorted[i])
+                local check_res, comment = goutils.check_move(b, x, y, player)
+                if check_res then break else x, y = nil, nil end -- if is legal move
+            else
+                rand = rand - prob_sorted[i]
+            end
+        end
+    else
+        for i = 1, 362 do
+            if index_sorted[i] ~= 362 then -- no pass move
+                x, y = goutils.moveIdx2xy(index_sorted[i])
+                local check_res, comment = goutils.check_move(b, x, y, player)
+                if check_res then break else x, y = nil, nil end -- if is legal move
+            end
         end
     end
 
     return x, y, win_rate
 end
-
 
 function rl_utils.rl_init(opt)
     opt.handi = 0
