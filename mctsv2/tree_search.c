@@ -215,9 +215,9 @@ static BOOL send_search_complete(TreeHandle *s, int complete_reason) {
   pthread_mutex_lock(&s->mutex_search_complete);
   // Time to send the semaphore if it is not sent yet.
   if (s->flag_search_complete == SC_NOT_YET) {
-    sem_post(&s->sem_search_complete);
     sent = TRUE;
     s->flag_search_complete = complete_reason;
+    sem_post(&s->sem_search_complete);
   }
   pthread_mutex_unlock(&s->mutex_search_complete);
   return sent;
@@ -687,10 +687,12 @@ static inline void normal_time_control(ThreadInfo *info, long time_elapsed) {
     float time_limit = (s->board._ply < first_round_ramp ? s->board._ply * s->params.time_limit / first_round_ramp : s->params.time_limit);
     if (time_elapsed > time_limit) {
       send_search_complete(s, SC_TIME_OUT);
+      __atomic_store_n(&s->ts_search_genmove_called, -1, __ATOMIC_RELAXED);  // set to -1 to skip time control
     } else {
       unsigned int time_left = __atomic_load_n(&s->common_params->time_left, __ATOMIC_ACQUIRE);
       if (time_left > 0 && time_elapsed > time_left / 2) {
         send_search_complete(s, SC_TIME_LEFT_CLOSE);
+        __atomic_store_n(&s->ts_search_genmove_called, -1, __ATOMIC_RELAXED);  // set to -1 to skip time control
       }
     }
   }
@@ -958,7 +960,8 @@ static void *threaded_expansion(void *ctx) {
     s->callback_backprop(info, aver_black_moku, board._next_player, end_ply, board_on_child, child_offset, b);
 
     // Add the total rollout_count count.
-    __sync_fetch_and_add(&s->rollout_count, 1);
+    int dcnn_count = __sync_fetch_and_add(&s->rollout_count, 1);
+    // PRINT_CRITICAL("%d: dcnn_count %d\n", pthread_self(), dcnn_count);
     // fprintf(stderr,"---End playout %d/%d [Round %d]---\n", i, K, round);
     //
     // tree_pool_check(p);
@@ -1167,7 +1170,14 @@ void tree_search_start(void *ctx) {
 
   // Initialize search complete signal.
   s->flag_search_complete = SC_NOT_YET;
+
+  s->rollout_count = 0;
+  s->dcnn_count = 0;
+  s->prev_dcnn_count = 0;
+  
+  // s->sem_search_complete = sem_open("sem_search_complete", O_CREAT, 0644, 0);
   sem_init(&s->sem_search_complete, 0, 0);
+
   pthread_mutex_init(&s->mutex_search_complete, NULL);
 
   // Initialize online model mutex.
