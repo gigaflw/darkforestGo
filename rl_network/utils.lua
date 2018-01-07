@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/29
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 12:51:27
+-- @Last Modified time: 2018-01-07 13:11:48
 --
 
 local resnet_utils = require 'resnet.utils'
@@ -41,11 +41,12 @@ function rl_utils.play_with_cnn(b, player, net, with_prob, model_type)
     local output = _play(model_type)
     local probs, win_rate = output[1], output[2]
     local prob_sorted, index_sorted = torch.sort(probs, 1, true)
+    local num_moves = (#prob_sorted)[1]
 
     local x, y
     if with_prob then
         local rand = math.random() * 0.7
-        for i = 1, 361 do -- no pass move so do not check 362
+        for i = 1, num_moves do -- no pass move so do not check 362
             if rand < prob_sorted[i] then
                 x, y = goutils.moveIdx2xy(index_sorted[i])
                 local check_res, comment = goutils.check_move(b, x, y, player)
@@ -55,7 +56,7 @@ function rl_utils.play_with_cnn(b, player, net, with_prob, model_type)
             end
         end
     else
-        for i = 1, 362 do
+        for i = 1, num_moves do
             if index_sorted[i] ~= 362 then -- no pass move
                 x, y = goutils.moveIdx2xy(index_sorted[i])
                 local check_res, comment = goutils.check_move(b, x, y, player)

@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/28
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 12:51:52
+-- @Last Modified time: 2018-01-07 13:08:57
 --
 
 local goutils = require 'utils.goutils'
@@ -171,6 +171,18 @@ function player:cmd_show_board()
     board.show(self.b, "last_move")
     return true
 end
+
+function player:cmd_final_score()
+    local res, stats = self:score()
+
+    if not res then
+        return false, "error in computing score"
+    end
+    local score = stats.score
+
+    local s =  score > 0 and string.format("B+%.1f", score) or string.format("W+%.1f", -score)
+    return true, s
+end
 ----------------------------------------------------
 -- gtp command functions end
 ----------------------------------------------------
@@ -248,8 +260,8 @@ function player:check_resign(threshold)
     local _, scores = self:score()
     local stat = { score = scores.score, min_score = scores.min_score, max_score = scores.max_score }
 
-    if scores.min_score > resign_thres or scores.max_score < -resign_thres then
-        stat.resign_side = scores.min_score > resign_thres and common.white or common.black
+    if scores.min_score > threshold or scores.max_score < -threshold then
+        stat.resign_side = scores.min_score > threshold and common.white or common.black
         return true, stat
     end
     if scores.min_score == scores.max_score and scores.max_score == scores.score then
@@ -296,7 +308,7 @@ function player:g()
 end
 
 function player:genmove(player)
-    local doc == [[
+    local doc = [[
         Generate move according to `callbacks.move_predictor`
         @params: player: [ common.black | common.white ]
         @return:
@@ -330,7 +342,7 @@ function player:genmove(player)
     end
 
     -- Check whether we should resign ...
-    if self.opt.resign and self.b._ply >= 140 and self.b._ply % self.opt.resign_step == 1 then
+    if self.opt.resign and self.b._ply >= 0 and self.b._ply % self.opt.resign_step == 1 then
         io.stderr:write("Check whether we have screwed up...")
         local thres = self.opt.resign_thres or 10
         local do_resign, stat_resign = self:check_resign(thres)
@@ -362,18 +374,6 @@ function player:genmove(player)
     print(string.format("* Time spent in genmove %d : %.3fs", self.b._ply, common.wallclock() - t_start))
 
     return true, move, win_rate
-end
-
-function player:final_score()
-    local res, stats = self:score()
-
-    if not res then
-        return false, "error in computing score"
-    end
-    local score = stats.score
-
-    local s =  score > 0 and string.format("B+%.1f", score) or string.format("W+%.1f", -score)
-    return true, s
 end
 
 function player:clear_board()

@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/12/16
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 12:51:38
+-- @Last Modified time: 2018-01-07 13:08:50
 --
 
 local pl = require 'pl.import_into'()
@@ -27,22 +27,18 @@ local opt = pl.lapp[[
     --max_ply              (default 1000)           End game in advance
     --at_random                                     Select moves according to probability, in stead of choosing the move with highest prob
     --sample_step          (default -1)             If the step of a game is less than the threshold, it is a bad sample.
-    --resign                                        Whether support resign in rl_training.
     --num_games            (default 2)              The number of games to be playe.
     --pipe_path            (default "./pipes")  Pipe path
     --device               (default 3)
     --sgf_dir              (default ".") Where to save sgf
 
-    ************************ MCTS Options (no use if --mcts is not given) ****************************
-
     ** Player Options **
     --win_rate_thres    (default 0.0)           If the win rate is lower than that, resign.
-    --exec              (default "")            NO USE
-    --setup_board       (default "")            NO USE.Setup board. The argument is "sgfname moveto"
-    --resign            (default true)          Whether support resign in rl_training.
+    --resign                                    Whether resign when screwed up.
     --resign_thre       (default 10)            If the opponent wins at least this much in fast rollout, we resign.
     --resign_step       (default 20)            Check resign every this steps
 
+    ************************ MCTS Options (no use if --mcts is not given) ****************************
     ** PlayoutV2 Options **
     --num_gpu           (default 1)
     -v,--verbose        (default 1)             The verbose level (1 = critical, 2 = info, 3 = debug)
