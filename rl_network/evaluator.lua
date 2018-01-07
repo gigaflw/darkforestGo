@@ -1,8 +1,8 @@
 --
 -- Created by HgS_1217_
 -- Date: 2017/11/27
--- Last Modified by:   gigaflw
--- Last Modified time: 2017-12-16 10:07:58
+-- @Last Modified by:   gigaflw
+-- @Last Modified time: 2018-01-07 12:51:32
 --
 
 require '_torch_class_patch'
