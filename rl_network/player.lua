@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/28
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 13:23:26
+-- @Last Modified time: 2018-01-07 15:12:42
 --
 
 local goutils = require 'utils.goutils'
@@ -28,26 +28,22 @@ function player:__init(callbacks, opt)
     local rule = (opt and opt.rule == "jp") and board.japanese_rule or board.chinese_rule
     self.rule = opt.rule
 
-    self:_init_dp()
     self:clear_board()
     self:log("maim "..self.version.." on")
+    self._dp_initialized = false
 end
 
 function player:_init_dp()
     -- init default policy
-    local dp_simple = require 'board.default_policy'
-    local dp_pachi = require 'pachi_tactics.moggy'
-    local dp_v2 = require 'board.pattern_v2'
-
     if self.opt.default_policy == 'v2' then
-        self.dp = dp_v2
+        self.dp = require 'board.pattern_v2'
         self.def_policy = self.dp.init(self.opt.default_policy_pattern_file, rule)
         self.dp.set_sample_params(self.def_policy, self.opt.default_policy_sample_topn, self.opt.default_policy_temperature)
     elseif self.opt.default_policy == 'pachi' then
-        self.dp = dp_pachi
+        self.dp = require 'pachi_tactics.moggy'
         self.def_policy = self.dp.new(rule)
     elseif self.opt.default_policy == 'simple' then
-        self.dp = dp_simple
+        self.dp = require 'board.default_policy'
         self.def_policy = self.dp.new(rule)
     end
 end
@@ -57,7 +53,7 @@ function player:mainloop()
         local line = io.read()
         if line == nil then break end
         local ret, quit = self:parse_command(line)
-        print(ret..'\n\n')
+        print(ret.."\n\n")
         io.flush()
         if quit == true then break end
     end
@@ -208,6 +204,7 @@ function player:score(show_more)
     if self.val_komi == nil or self.val_handi == nil then
         return false, "komi or handi is not set!"
     end
+    if not self._dp_initialized then self:_init_dp() end
     -- Computing final score could be cpu hungry, so we need to stop computation if possible
     if self.cbs.thread_switch then self.cbs.thread_switch("off") end
 
@@ -427,7 +424,7 @@ function player:save_sgf(filename, re, pb, pw, is_save)
 end
 
 function player:log(message)
-    if self.opt.verbose then
+    if self.opt.player_verbose then
         -- use stderr to avoid the message being parsed by gtp controller
         io.stderr:write(string.format("[%s]: %s\n", self.name, message))
     end

@@ -2,42 +2,35 @@
 -- Created by HgS_1217_
 -- Date: 2017/12/16
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 13:19:36
+-- @Last Modified time: 2018-01-07 15:14:29
 --
-
 local pl = require 'pl.import_into'()
 
-local mcts = require 'rl_network.mcts'
-local self_play = require 'rl_network.self_play'
-local player = require 'rl_network.player'
-local rl_utils = require 'rl_network.utils'
-local utils = require 'utils.utils'
-
 local opt = pl.lapp[[
-    --mode                 (default 'gtp')          'gtp' or 'self'
+    --mode                 (default 'gtp')          'gtp' or 'battle'
     --mcts                 If given, use mcts search (local evaluator required),
                             in this case, which model to use is decided by the options in 'evaluator.lua'
                             otherwise, use the raw output of the network
 
-    --model1               (default "")             Path name to a model file
-    --model2               (default "")             Path name to a model file
+    --model                (default "")             Path name to a model file, no use if '--mcts' is given, in which case the used model is decided by 'evaluator.lua'
     --model_type           (default "df2")          'df2' or 'resnet'
-                                                    No use if '--mcts' is given, in which case the used model is decided by 'evaluator.lua'
-
-    --max_ply              (default 1000)           End game in advance
     --at_random                                     Select moves according to probability, in stead of choosing the move with highest prob
-    --sample_step          (default -1)             If the step of a game is less than the threshold, it is a bad sample.
-    --num_games            (default 2)              The number of games to be playe.
-    --pipe_path            (default "./pipes")  Pipe path
-    --device               (default 3)
-    --sgf_dir              (default ".") Where to save sgf
 
     ** Player Options **
     --player_name       (default 'maim')
+    --player_verbose
     --win_rate_thres    (default 0.0)           If the win rate is lower than that, resign.
     --resign                                    Whether resign when screwed up.
     --resign_thre       (default 10)            If the opponent wins at least this much in fast rollout, we resign.
     --resign_step       (default 20)            Check resign every this steps
+
+    ** 'battle mode' Options **
+    --model2               (default "")             Path name to a model file
+    --max_ply              (default 1000)           End game in advance
+    --sample_step          (default -1)             If the step of a game is less than the threshold, it is a bad sample.
+    --num_games            (default 2)              The number of games to be playe.
+    --device               (default 3)              GPU device if there are multiple
+    --sgf_dir              (default ".")            Where to save sgf
 
     ************************ MCTS Options (no use if --mcts is not given) ****************************
     ** PlayoutV2 Options **
@@ -116,12 +109,16 @@ else
     require 'nn'
 end
 
+-- init callbacks
 local callbacks
 if opt.mcts then
+    local mcts = require 'rl_network.mcts'
     mcts.init(opt)
     callbacks = mcts.callbacks
 else
-    local model = torch.load(opt.model1).net
+    local model = torch.load(opt.model).net
+    local rl_utils = require 'rl_network.utils'
+
     callbacks = {
         move_predictor = function (board, player)
             assert(player == board._next_player)
@@ -130,12 +127,18 @@ else
         end
     }
 end
+-- init callbacks ends
 
 if opt.mode == 'gtp' then
-    local player = player(callbacks, opt)
+    local Player = require 'rl_network.player'
+    local player = Player(callbacks, opt)
     player:mainloop()
-elseif opt.mode == 'self' then
+elseif opt.mode == 'battle' then
+    local rl_utils = require 'rl_network.utils'
+    local self_play = require 'rl_network.self_play'
+
     -- TODO: self play with mcts
+    opt.model1 = opt.model          -- legacy code compatibility
     local dcnn_opt1, dcnn_opt2 = rl_utils.play_init(opt)
     local win1, win2, score = self_play.play(dcnn_opt1, dcnn_opt2, opt)
     print(string.format("model1 wins %.2f%%, %.2f on average", win1/opt.num_games * 100, score / opt.num_games))
