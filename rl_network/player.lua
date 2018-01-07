@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/28
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 17:04:59
+-- @Last Modified time: 2018-01-07 22:21:42
 --
 
 local goutils = require 'utils.goutils'
@@ -288,7 +288,7 @@ function player:play(player, x, y)
     end
 
     if self.cbs.move_receiver then self.cbs.move_receiver(x, y, player) end
-    if self.cbs.adjust_params_in_game then self.cbs.adjust_params_in_game(self.b) end
+    -- if self.cbs.adjust_params_in_game then self.cbs.adjust_params_in_game(self.b) end
     self:add_to_sgf_history(x, y, player)
 
     -- self:log(string.format("* ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player))
@@ -359,7 +359,7 @@ function player:genmove(player)
         error("Illegal move from move_predictor! move: " .. move)
     end
 
-    if self.cbs.adjust_params_in_game then self.cbs.adjust_params_in_game(self.b) end  -- FIXME: necessary?
+    -- if self.cbs.adjust_params_in_game then self.cbs.adjust_params_in_game(self.b) end  -- FIXME: necessary?
     self:add_to_sgf_history(x, y, player)
     self.win_rate = win_rate
 
