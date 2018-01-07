@@ -26,7 +26,7 @@ function player:__init(callbacks, opt)
     local rule = (opt and opt.rule == "jp") and board.japanese_rule or board.chinese_rule
     self.rule = opt.rule
 
-    if opt.mcts then self:_init_dp() end
+    self:_init_dp()
     self:clear_board()
     print("maim "..self.version.." on")
 end
@@ -90,9 +90,15 @@ function player:parse_command(line, mode)
     return ret, quit
 end
 
---------------------------
--- gtp commands
---------------------------
+----------------------------------------------------
+-- gtp command functions
+--- @args: all args are string
+--- @return: all gtp functions need to return a three-tuple
+---     < succeed, outputstr, quit >
+---   where succeed: boolean, whether the cmd is valid
+---         outputstr:  string, optional
+---         quit: boolean, optional, whether to quit the main loop
+----------------------------------------------------
 function player:cmd_protocol_version()
     return true, '2'
 end
@@ -147,84 +153,44 @@ end
 function player:cmd_play(player, coord)
     local x, y, player = goutils.parse_move_gtp(coord, player)
     if x == nil then x, y = 0, 0 end
-    return self:play(player, x, y)  -- todo: clean this
+    local valid, str = self:play(player, x, y)
+    board.show(self.b, 'last_move')
+    return valid, str
 end
 
 function player:cmd_genmove(player)
     player = (player:lower() == 'w' or player:lower() == 'white') and common.white or common.black
-    return self:genmove(player)  -- todo: clean this
+    local valid, str = self:genmove(player)
+    board.show(self.b, 'last_move')
+    return valid, str
 end
 
 function player:cmd_show_board()
     board.show(self.b, "last_move")
     return true
 end
---------------------------
--- gtp commands end
---------------------------
+----------------------------------------------------
+-- gtp command functions end
+----------------------------------------------------
 
 --------------------------
 -- Util functions
 --------------------------
-function player:check_resign()
-    -- If the score is beyond the threshold, then one side will resign.
-    local thres = 10
-
-    -- Fast complete the game using pachi tactics, then compute the final score
-    local score, _, _, scores = om.util_compute_final_score(
-        self.ownermap, self.b, self.val_komi + self.val_handi, nil,
-        function (b, max_depth) return self.dp.run(self.def_policy, b, max_depth, false) end
-    )
-    local min_score, max_score = scores:min(), scores:max()
-    local resign_side
-
-    if min_score > thres then
-        resign_side = common.white
-    elseif max_score < -thres then
-        resign_side = common.black
-    elseif min_score == max_score and max_score == score then
-        if score > 0.5 then
-            resign_side = common.white
-        elseif score < -0.5 then
-            resign_side = common.black
-        end
-    end
-
-    return resign_side, score, min_score, max_score
-end
-
--- Write sgf
-function player:add_to_sgf_history(x, y, player)
-    table.insert(self.sgf_history, { x, y, player })
-end
-
--- Save the current history to sgf.
-function player:save_sgf(filename, re, pb, pw, is_save)
-    local date = utils.get_current_date()
-    local header = {
-        komi = self.val_komi,
-        handi = self.val_handi,
-        rule = self.rule,
-        player_b = pb,
-        player_w = pw,
-        date = date,
-        result = re
-    }
-
-    local res = sgfloader.sgf_string(header, self.sgf_history)
-
-    if is_save then
-        local f = io.open(filename, "w")
-        if not f then return false, "file " .. filename .. " cannot be opened" end
-        f:write(res)
-        f:close()
-        io.stderr:write("Sgf " .. filename .. " saved.\n")
-    end
-
-    return res
-end
-
 function player:score(show_more)
+    local doc = [[
+        Compute the score of the current game by play the game to the end with `default policy` several times
+        This can be TIME CONSUMING, modify the default policy parameter to control the performance
+
+        @returns: < bool_successful >, < stat >
+            where stat is table like: {
+                score = < average score of BLACK side >,
+                min_score = < min score >,
+                max_score = < max score >,
+                max_score = < max score >,
+                num_dame = < how many dame we have now >,
+                livedead = < a 19x19 char tensor denoting the dead/live stones>
+            }
+    ]]
     if self.val_komi == nil or self.val_handi == nil then
         return false, "komi or handi is not set!"
     end
@@ -256,17 +222,56 @@ function player:score(show_more)
     end
 
     if self.cbs.thread_switch then self.cbs.thread_switch("on") end
-    return true, tostring(score), false, { score = score, min_score = min_score, max_score = max_score, num_dame = #stones.dames, livedead = livedead }
+    return true, { score = score, min_score = min_score, max_score = max_score, num_dame = #stones.dames, livedead = livedead }
 end
 
-function player:play(player, x, y)
-    if not self.board_initialized then error("Board should be initialized!!") end
 
+function player:check_resign(threshold)
+    local doc = [[
+        Run default policy serveral times to see whether any side is doomed now
+        This can be TIME CONSUMING
+
+        When some side will resign:
+        a. one side wins/loses at least `threshold` stones
+        b. all dp result has same score, which means there can be no change in the score, early exit
+
+        @returns: < bool_do_resign >, < stat >
+            where stat is table like: {
+                resign_side = [ common.black | common.white ],
+                score = < average score of BLACK side >,
+                min_score = < min score >,
+                max_score = < max score >,
+            }
+    ]]
+    local _, scores = self:score()
+    local stat = { score = scores.score, min_score = scores.min_score, max_score = scores.max_score }
+
+    if scores.min_score > resign_thres or scores.max_score < -resign_thres then
+        stat.resign_side = scores.min_score > resign_thres and common.white or common.black
+        return true, stat
+    end
+    if scores.min_score == scores.max_score and scores.max_score == scores.score then
+        stat.resign_side = scores.score > 0 and common.white or common.black
+        return true, stat
+    end
+
+    return false
+end
+
+
+function player:play(player, x, y)
+    local doc = [[
+        @params: player: [ common.black | common.white ]
+        @params: x, y: int from 1 to 19, give 0, 0 to denote a pass move
+        @return: 
+            false, "Invalid move!"  if invalid move
+            true, "resign"          if game ends
+            true, < move info str>  otherwise
+    ]]
+    if not self.board_initialized then error("Board should be initialized!!") end
     if not self:verify_player(player) then
         return false, "Invalid move!"
     end
-
-    print(string.format("* ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player))
 
     if not board.play(self.b, x, y, player) then
         io.stderr:write(string.format("Illegal move from the opponent! x = %d, y = %d, player = %d", x, y, player))
@@ -277,21 +282,11 @@ function player:play(player, x, y)
     if self.cbs.adjust_params_in_game then self.cbs.adjust_params_in_game(self.b) end
     self:add_to_sgf_history(x, y, player)
 
-    -- local move = goutils.compose_move_gtp(x, y)
+    if board.is_game_end(self.b) then
+        return true, "resign"
+    end
 
-    -- if board.is_game_end(self.b) then
-    --     local _, _, _, scores = self:score()
-    --     return true, "resign", {
-    --         resign_side = 0,
-    --         score = scores.score,
-    --         min_score = scores.min_score,
-    --         max_score = scores.max_score
-    --     }
-    -- end
-
-    board.show(self.b, 'last_move')
-
-    return true
+    return true, string.format("* ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player)
 end
 
 function player:g()
@@ -299,14 +294,22 @@ function player:g()
 end
 
 function player:genmove(player)
+    local doc == [[
+        Generate move according to `callbacks.move_predictor`
+        @params: player: [ common.black | common.white ]
+        @return:
+            false, < error info >   if invalid
+            true, "pass"            if we pass
+            true, "resign"          if we resign
+            true, < move str >      otherwise
 
+    ]]
     if not self.board_initialized then
         return false, "Board should be initialized!!"
     end
     if player == nil then
         return false, "Player should not be null"
     end
-
     if not self:verify_player(player) then
         return false, "Invalid move!"
     end
@@ -316,40 +319,21 @@ function player:genmove(player)
     -- After that, if enemy pass then we pass.
     if self.b._ply >= 140 and goutils.coord_is_pass(self.b._last_move) then
         -- If the situation has too many dames, we don't pass.
-        local _, _, _, stats = self:score()
+        local _, stats = self:score()
         if stats.num_dame < 5 then
-            -- Play pass here.
             board.play(self.b, 0, 0, player)
             if self.cbs.move_receiver then self.cbs.move_receiver(0, 0, player) end
-            return true, "resign", {
-                resign_side = 0,
-                score = stats.score,
-                min_score = stats.min_score,
-                max_score = stats.max_score
-            }
+            return true, "pass"
         end
     end
 
+    -- Check whether we should resign ...
     if self.opt.resign and self.b._ply >= 140 and self.b._ply % self.opt.resign_step == 1 then
         io.stderr:write("Check whether we have screwed up...")
-        local resign_thres = self.opt.resign_thres or 10
-        local _, _, _, scores = self:score()
-        if scores.min_score > resign_thres or scores.max_score < -resign_thres then
-            return true, "resign", {
-                resign_side = scores.min_score > resign_thres and common.white or common.black,
-                score = scores.score,
-                min_score = scores.min_score,
-                max_score = scores.max_score
-            }
-        end
-        if scores.min_score == scores.max_score and scores.max_score == scores.score then
-            -- The estimation is believed to be absolutely correct.
-            return true, "resign", {
-                resign_side = scores.score > 0 and common.white or common.black,
-                score = scores.score,
-                min_score = scores.min_score,
-                max_score = scores.max_score
-            }
+        local thres = self.opt.resign_thres or 10
+        local do_resign, stat_resign = self:check_resign(thres)
+        if do_resign then
+            return true, "resign", stat_resign
         end
     end
 
@@ -373,14 +357,13 @@ function player:genmove(player)
     self:add_to_sgf_history(x, y, player)
     self.win_rate = win_rate
 
-    board.show(self.b, 'last_move')
     print(string.format("* Time spent in genmove %d : %.3fs", self.b._ply, common.wallclock() - t_start))
 
     return true, move, win_rate
 end
 
 function player:final_score()
-    local res, _, _, stats = self:score()
+    local res, stats = self:score()
 
     if not res then
         return false, "error in computing score"
@@ -414,6 +397,37 @@ function player:verify_player(player)
     else
         return true
     end
+end
+
+-- Write sgf
+function player:add_to_sgf_history(x, y, player)
+    table.insert(self.sgf_history, { x, y, player })
+end
+
+-- Save the current history to sgf.
+function player:save_sgf(filename, re, pb, pw, is_save)
+    local date = utils.get_current_date()
+    local header = {
+        komi = self.val_komi,
+        handi = self.val_handi,
+        rule = self.rule,
+        player_b = pb,
+        player_w = pw,
+        date = date,
+        result = re
+    }
+
+    local res = sgfloader.sgf_string(header, self.sgf_history)
+
+    if is_save then
+        local f = io.open(filename, "w")
+        if not f then return false, "file " .. filename .. " cannot be opened" end
+        f:write(res)
+        f:close()
+        io.stderr:write("Sgf " .. filename .. " saved.\n")
+    end
+
+    return res
 end
 --------------------------
 -- Util function ends
