@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/27
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 19:27:29
+-- @Last Modified time: 2018-01-07 21:04:13
 --
 
 require '_torch_class_patch'
@@ -31,7 +31,7 @@ local opt = pl.lapp[[
     --model_dir     (default './rl.ckpt')   Where to find model file from
     --model         (default 'models/df2.bin')
     --model_type    (default 'df2')        'resnet' | 'df2', how to use the model
-    --dev_model     (default 'rl.e(%d+).params')    The regex for target model file name to check whether we need to update the model
+    --dev_model     (default 'non-exist-rl.e(%d+).params')    The regex for target model file name to check whether we need to update the model
     --reload_time   (default 5)             Time in second to check whether there is a newer model we can load
 
     --single_step                           Ask everytime a batch of move is to be sent back
@@ -54,7 +54,7 @@ end
 if opt.verbose then utils.dbg_set() end
 
 ---- Util Functions ----
-function get_latest_dev_model(current)
+local function get_latest_dev_model(current)
     local latest, filename = current, nil
     for f in paths.iterfiles(opt.model_dir) do
         version = tonumber(f:match(opt.dev_model))
@@ -70,7 +70,7 @@ function get_latest_dev_model(current)
     end
 end
 
-function play(model, board, player)
+local function play(model, board, player)
     if opt.model_type == 'resnet' then
         -- for resnet models
         local output = resnet_utils.play(model, board, player, true) -- true means no pass
@@ -82,12 +82,41 @@ function play(model, board, player)
         local output = model:forward(feature:view(1, table.unpack((#feature):totable())))
         local prob, value
         if type(output) == 'table' then
-            prob, value = output[1]:exp(), output[2]  -- exp because the outpu of network is logsoftmax
+            prob, value = output[1]:exp(), output[2]:view(N)
         else
             prob, value = output:exp(), 0
         end
         return prob, value
     end
+end
+
+local _input_buffer
+local function play_batch(model, boards, players)
+    assert(opt.model_type == 'df2')  -- TODO: support resnet 
+    assert(#boards == #players)
+    local N = #boards
+
+    for i = 1, N do
+        local feature, _ = goutils.extract_feature(boards[i], players[i], {feature_type = 'extended', userank = true, usecpu = true}, '9d')
+        if _input_buffer == nil then
+            local tensor_type = model._type:find('Cuda') ~= nil and torch.CudaTensor or torch.FloatTensor
+            _input_buffer = tensor_type(opt.max_batch, table.unpack((#feature):totable()))
+        end
+
+        _input_buffer[i] = feature
+    end
+
+    local output = model:forward(_input_buffer:sub(1, N))
+
+    local prob, value
+    if type(output) == 'table' then
+        prob, value = output[1]:exp(), output[2]:view(N)
+        -- exp because the output of network is logsoftmax
+        -- prob: N x 361, value: N
+    else
+        prob, value = output:exp(), 0
+    end
+    return prob, value
 end
 
 ---- Constants ----
@@ -170,11 +199,14 @@ while true do
         local probs_sorted_v = pre_probs_sorted_v:sub(1, num_valid)
         local probs_sorted_k = pre_probs_sorted_k:sub(1, num_valid)
 
+        local boards_for_input, players_for_input = {}, {}
         for i = 1, num_valid do
-            prob, value = play(model, boards[i], boards[i]._next_player)
+            boards_for_input[i] = boards[i]
+            players_for_input[i] = boards[i]._next_player
+        end
 
-            probs[i] = prob  -- a 361-d probability distribution
-            values[i] = value -- a float in [-1, 1], output of value network
+        probs, values = play_batch(model, boards_for_input, players_for_input)
+        for i = 1, num_valid do
             pkg.t_received[block_ids[i]] = common.wallclock()
         end
 
