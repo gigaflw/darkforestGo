@@ -838,6 +838,8 @@ static void *threaded_expansion(void *ctx) {
   char buf[30];
   PRINT_DEBUG("Start expansion\n");
 
+  clock_t t0;
+
   for (;;) {
     if (threaded_block_if_needed(ctx)) break;
     threaded_if_search_complete(ctx);
@@ -854,6 +856,8 @@ static void *threaded_expansion(void *ctx) {
     // PRINT_DEBUG("---Start playout %d/%d ---\n", i, info->s->num_rollout_per_thread);
     // fprintf(stderr,"---Start playout %d/%d ---\n", i, info->s->num_rollout_per_thread);
     int depth = 0;
+
+    // t0 = clock();
     while (1) {
       // Pick a random child.
       if (b == TP_NULL) error("We should never visit TP_NULL.");
@@ -870,7 +874,9 @@ static void *threaded_expansion(void *ctx) {
         }
       }
       // Run the CNN policy.
+      // clock_t t = clock();
       BOOL policy_success = s->callback_policy(info, b, &board, &child_offset, &c);
+      // PRINT_CRITICAL("cnn policy depth %d %f\n", depth, ((double)(clock() - t) / CLOCKS_PER_SEC));
 
       if (! policy_success) {
         info->num_policy_failed ++;
@@ -939,11 +945,14 @@ static void *threaded_expansion(void *ctx) {
       }
       depth ++;
     }
+    // PRINT_CRITICAL("to find best child: %f\n", ((double)(clock() - t0) / CLOCKS_PER_SEC));
 
     if (depth > info->max_depth) info->max_depth = depth;
 
     // Step 2, playout from current board and curr_player.
+
     PRINT_DEBUG("Default policy...\n");
+    // t0 = clock();
     int end_ply = board._ply;
     float aver_black_moku = 0.0;
     if (s->callback_def_policy != NULL && ! s->params.life_and_death_mode) {
@@ -955,13 +964,16 @@ static void *threaded_expansion(void *ctx) {
       aver_black_moku /= s->params.num_playout_per_rollout;
     }
     PRINT_INFO("DP: aver black moku = %f\n", aver_black_moku);
+    // PRINT_CRITICAL("dp: %f\n", ((double)(clock() - t0) / CLOCKS_PER_SEC));
 
+    // t0 = clock();
     PRINT_DEBUG("Back propagation ...\n");
     s->callback_backprop(info, aver_black_moku, board._next_player, end_ply, board_on_child, child_offset, b);
+    // PRINT_CRITICAL("bp: %f\n", ((double)(clock() - t0) / CLOCKS_PER_SEC));
 
     // Add the total rollout_count count.
     int dcnn_count = __sync_fetch_and_add(&s->rollout_count, 1);
-    // PRINT_CRITICAL("%d: dcnn_count %d\n", pthread_self(), dcnn_count);
+    // PRINT_CRITICAL("[%d]: dcnn_count %d\n", pthread_self(), dcnn_count);
     // fprintf(stderr,"---End playout %d/%d [Round %d]---\n", i, K, round);
     //
     // tree_pool_check(p);
