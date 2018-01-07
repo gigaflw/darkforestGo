@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/12/16
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 13:08:50
+-- @Last Modified time: 2018-01-07 13:19:36
 --
 
 local pl = require 'pl.import_into'()
@@ -33,6 +33,7 @@ local opt = pl.lapp[[
     --sgf_dir              (default ".") Where to save sgf
 
     ** Player Options **
+    --player_name       (default 'maim')
     --win_rate_thres    (default 0.0)           If the win rate is lower than that, resign.
     --resign                                    Whether resign when screwed up.
     --resign_thre       (default 10)            If the opponent wins at least this much in fast rollout, we resign.
@@ -114,7 +115,6 @@ if pl.path.exists("/dev/nvidiactl") then
 else
     require 'nn'
 end
-
 
 local callbacks
 if opt.mcts then

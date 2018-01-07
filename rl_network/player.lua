@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/28
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 13:08:57
+-- @Last Modified time: 2018-01-07 13:23:26
 --
 
 local goutils = require 'utils.goutils'
@@ -21,7 +21,7 @@ function player:__init(callbacks, opt)
 
     self.b, self.board_initialized = board.new(), false
     self.cbs = callbacks
-    self.name = "maim"
+    self.name = opt.player_name
     self.version = "1.0"
     self.ownermap = om.new()
 
@@ -30,7 +30,7 @@ function player:__init(callbacks, opt)
 
     self:_init_dp()
     self:clear_board()
-    print("maim "..self.version.." on")
+    self:log("maim "..self.version.." on")
 end
 
 function player:_init_dp()
@@ -155,9 +155,9 @@ end
 function player:cmd_play(player, coord)
     local x, y, player = goutils.parse_move_gtp(coord, player)
     if x == nil then x, y = 0, 0 end
-    local valid, str = self:play(player, x, y)
+    local valid = self:play(player, x, y)
     board.show(self.b, 'last_move')
-    return valid, str
+    return valid
 end
 
 function player:cmd_genmove(player)
@@ -220,18 +220,18 @@ function player:score(show_more)
     local max_score = scores:max()
     local stones = om.get_territorylist(territory)
 
-    io.stderr:write(string.format("Score (%s): %f, Playout min: %f, Playout max: %f, #dame: %d\n", self.opt.default_policy, score, min_score, max_score, #stones.dames));
+    self:log(string.format("Score (%s): %f, Playout min: %f, Playout max: %f, #dame: %d\n", self.opt.default_policy, score, min_score, max_score, #stones.dames))
     if show_more then
         -- Show the deadstone.
         local dead_stones = om.get_deadlist(livedead)
         local dead_stones_info = table.concat(dead_stones.b_str, " ") .. " " .. table.concat(dead_stones.w_str, " ")
-        io.stderr:write("Deadstones info:")
-        io.stderr:write(dead_stones_info)
+        self:log("Deadstones info:")
+        self:log(dead_stones_info)
         om.show_deadstones(self.b, livedead)
 
-        io.stderr:write("Black prob:")
+        self:log("Black prob:")
         om.show_stones_prob(self.ownermap, common.black)
-        io.stderr:write("White prob:")
+        self:log("White prob:")
         om.show_stones_prob(self.ownermap, common.white)
     end
 
@@ -277,30 +277,24 @@ function player:play(player, x, y)
     local doc = [[
         @params: player: [ common.black | common.white ]
         @params: x, y: int from 1 to 19, give 0, 0 to denote a pass move
-        @return: 
-            false, "Invalid move!"  if invalid move
-            true, "resign"          if game ends
-            true, < move info str>  otherwise
+        @return: < bool_wether_move_succceeded >
     ]]
     if not self.board_initialized then error("Board should be initialized!!") end
     if not self:verify_player(player) then
-        return false, "Invalid move!"
+        return false
     end
 
     if not board.play(self.b, x, y, player) then
-        io.stderr:write(string.format("Illegal move from the opponent! x = %d, y = %d, player = %d", x, y, player))
-        return false, "Invalid move"
+        self:log(string.format("Illegal move from the opponent! x = %d, y = %d, player = %d", x, y, player))
+        return false
     end
 
     if self.cbs.move_receiver then self.cbs.move_receiver(x, y, player) end
     if self.cbs.adjust_params_in_game then self.cbs.adjust_params_in_game(self.b) end
     self:add_to_sgf_history(x, y, player)
 
-    if board.is_game_end(self.b) then
-        return true, "resign"
-    end
-
-    return true, string.format("* ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player)
+    -- self:log(string.format("* ply = %d, x = %d, y = %d, player = %d", self.b._ply, x, y, player))
+    return true
 end
 
 function player:g()
@@ -343,7 +337,7 @@ function player:genmove(player)
 
     -- Check whether we should resign ...
     if self.opt.resign and self.b._ply >= 0 and self.b._ply % self.opt.resign_step == 1 then
-        io.stderr:write("Check whether we have screwed up...")
+        self:log("Check whether we have screwed up...")
         local thres = self.opt.resign_thres or 10
         local do_resign, stat_resign = self:check_resign(thres)
         if do_resign then
@@ -356,7 +350,7 @@ function player:genmove(player)
     local x, y, win_rate = self.cbs.move_predictor(self.b, player)
 
     if x == nil then
-        io.stderr:write("Warning! No move is valid!")
+        self:log("Warning! No move is valid!")
         x, y = 0, 0 -- Play pass here.
     end
 
@@ -371,7 +365,7 @@ function player:genmove(player)
     self:add_to_sgf_history(x, y, player)
     self.win_rate = win_rate
 
-    print(string.format("* Time spent in genmove %d : %.3fs", self.b._ply, common.wallclock() - t_start))
+    self:log(string.format("* Time spent in genmove %d : %.3fs", self.b._ply, common.wallclock() - t_start))
 
     return true, move, win_rate
 end
@@ -394,7 +388,7 @@ function player:verify_player(player)
     if player ~= self.b._next_player then
         local supposed_player = (self.b._next_player == common.white and 'W' or 'B')
         local curr_player = (player == common.white and 'W' or 'B')
-        print(string.format("Wrong player! The player is supposed to be %s but actually is %s...", supposed_player, curr_player))
+        self:log(string.format("Wrong player! The player is supposed to be %s but actually is %s...", supposed_player, curr_player))
         return false
     else
         return true
@@ -426,10 +420,17 @@ function player:save_sgf(filename, re, pb, pw, is_save)
         if not f then return false, "file " .. filename .. " cannot be opened" end
         f:write(res)
         f:close()
-        io.stderr:write("Sgf " .. filename .. " saved.\n")
+        self:log("Sgf " .. filename .. " saved.\n")
     end
 
     return res
+end
+
+function player:log(message)
+    if self.opt.verbose then
+        -- use stderr to avoid the message being parsed by gtp controller
+        io.stderr:write(string.format("[%s]: %s\n", self.name, message))
+    end
 end
 --------------------------
 -- Util function ends
