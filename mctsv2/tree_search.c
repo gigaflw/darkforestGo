@@ -162,11 +162,11 @@ static int block_all_threads(TreeHandle *s, BOOL print_and_reset_all_stats) {
   s->prev_dcnn_count = 0;
 
   // Check "search complete semaphore", clear it if necessary.
-  int sem_value;
-  sem_getvalue(&s->sem_search_complete, &sem_value);
-  PRINT_INFO("Semaphore value: %d\n", sem_value);
-  if (sem_value > 0) sem_wait(&s->sem_search_complete);
-  s->flag_search_complete = SC_NOT_YET;
+  // int sem_value;
+  // sem_getvalue(s->sem_search_complete, &sem_value);
+  // PRINT_INFO("Semaphore value: %d\n", sem_value);
+  // if (sem_value > 0) sem_wait(s->sem_search_complete);
+  // s->flag_search_complete = SC_NOT_YET;
   s->all_stats_cleared = TRUE;
 
   // All threads are blocked. Now do your stuff.
@@ -1885,6 +1885,9 @@ Move tree_search_pick_best(void *ctx, AllMoves *all_moves, const Board *verify_b
   float win = best_child->parent->data.stats[best_child->parent_offset].black_win;
   if (player == S_WHITE) win = total - win;
   Move res = { .x = X(best_m), .y = Y(best_m), .m = best_m, .player = player, .win_rate = win_rate, .win_games = win, .total_games = total};
+
+  resume_all_threads(s);
+
   return res;
 }
 
