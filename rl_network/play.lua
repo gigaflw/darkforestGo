@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/12/16
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 15:14:29
+-- @Last Modified time: 2018-01-07 17:22:20
 --
 local pl = require 'pl.import_into'()
 
@@ -63,7 +63,7 @@ local opt = pl.lapp[[
 
     *** backpropagation ***
     --use_cnn_final_score                             Whether we use CNN final score.
-    --min_ply_to_use_cnn_final_score (default 100)    When to use cnn final score.
+    --min_ply_to_use_cnn_final_score (default  60)    When to use cnn final score.
     --final_mixture_ratio            (default 0.5)    The mixture ratio we used.
 
     *** child node expansion ***
@@ -77,7 +77,7 @@ local opt = pl.lapp[[
     --use_old_uct                               old uct has smaller factor for prior
     --use_sigma_over_n                          use sigma / n (or sqrt(nparent/n)). This makes sigma small for nodes with confident win rate estimation.
     --num_virtual_games (default 0)             Seems no use. If > 0, there will be no noise for uct prior
-    --decision_mixture_ratio (default 5.0)      Mixture MCTS count ratio with cnn_confidence.
+    --decision_mixture_ratio (default 5.0)      score = this_ratio * cnn_pred / factor  + win_rate
     --use_rave                                  Whether we use RAVE.
 
     *** time control ***

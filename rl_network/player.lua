@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/28
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 15:12:42
+-- @Last Modified time: 2018-01-07 17:04:59
 --
 
 local goutils = require 'utils.goutils'
@@ -46,6 +46,7 @@ function player:_init_dp()
         self.dp = require 'board.default_policy'
         self.def_policy = self.dp.new(rule)
     end
+    self._dp_initialized = true
 end
 
 function player:mainloop()
@@ -333,7 +334,7 @@ function player:genmove(player)
     end
 
     -- Check whether we should resign ...
-    if self.opt.resign and self.b._ply >= 0 and self.b._ply % self.opt.resign_step == 1 then
+    if self.opt.resign and self.b._ply >= 140 and self.b._ply % self.opt.resign_step == 1 then
         self:log("Check whether we have screwed up...")
         local thres = self.opt.resign_thres or 10
         local do_resign, stat_resign = self:check_resign(thres)

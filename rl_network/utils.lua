@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/29
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 13:11:48
+-- @Last Modified time: 2018-01-07 16:34:07
 --
 
 local resnet_utils = require 'resnet.utils'
@@ -19,14 +19,8 @@ function rl_utils.play_with_cnn(b, player, net, with_prob, model_type)
             return resnet_utils.play(net, b, player)
         elseif model_type == 'df2' then
             local dcnn_opt = {
-                sample_step = -1,
-                shuffle_top_n = -1,
-                rank = '9d',
                 userank = true,
-                handi = 0,
-                komi = 7.5,
                 feature_type = 'extended',
-                model = net,
                 usecpu = true,
             }
             local feature, _ = goutils.extract_feature(b, player, dcnn_opt, '9d')

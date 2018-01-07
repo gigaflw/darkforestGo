@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/27
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 12:51:32
+-- @Last Modified time: 2018-01-07 19:27:29
 --
 
 require '_torch_class_patch'
@@ -74,15 +74,19 @@ function play(model, board, player)
     if opt.model_type == 'resnet' then
         -- for resnet models
         local output = resnet_utils.play(model, board, player, true) -- true means no pass
-        return output[1], output[2] * NUM_POSSIBLE_MOVES
+        return output[1], output[2]
     else
         -- for df2.bin
-        local feature, named_features = goutils.extract_feature(board, player, {feature_type = 'extended', userank = true}, '9d') 
+        local feature, _ = goutils.extract_feature(board, player, {feature_type = 'extended', userank = true}, '9d') 
         if opt.use_gpu then feature = feature:cuda() end
         local output = model:forward(feature:view(1, table.unpack((#feature):totable())))
-        output = type(output) == 'table' and output[1] or output
-
-        return nn.SoftMax():forward(output:float()), 0 -- another value model is needed to give a value
+        local prob, value
+        if type(output) == 'table' then
+            prob, value = output[1]:exp(), output[2]  -- exp because the outpu of network is logsoftmax
+        else
+            prob, value = output:exp(), 0
+        end
+        return prob, value
     end
 end
 
