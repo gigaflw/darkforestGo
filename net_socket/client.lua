@@ -4,7 +4,7 @@
 --
 
 local socket = require("socket")
-local utils = require("net_socket.utils")
+local json = require("cjson")
 
 local host = "127.0.0.1"
 local port = 5000
@@ -16,9 +16,14 @@ local test = 0
 
 local input, recvt, sendt, status
 while true do
-    input = {q = 123, hgs = 1217 }
-    if next(input) then
-        assert(sock:send(utils.table_to_string(input) .. "\n"))
+    input = {q = 123, hgs = 1217}
+
+    local file = io.open("pipe.txt", "rb")
+    input = file:read()
+    file:close()
+
+    if #input > 0 then
+        assert(sock:send(json.encode(input) .. "\n"))
     end
 
     recvt, sendt, status = socket.select({sock}, nil, select_timeout)
@@ -26,7 +31,8 @@ while true do
         local response, receive_status = sock:receive()
         if receive_status ~= "closed" then
             if response then
-                print(utils.string_to_table(response))
+                local json_receive = json.decode(response)
+                print(json_receive)
 
 
                 -- TODO: Do something

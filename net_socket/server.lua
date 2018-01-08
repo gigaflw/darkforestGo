@@ -6,7 +6,7 @@
 package.path = package.path .. ';../?.lua'
 
 local socket = require("socket")
-local utils = require("net_socket.utils")
+local json = require("cjson")
 
 local host = "127.0.0.1"
 local port = 5000
@@ -32,8 +32,12 @@ while true do
             local receive, receive_status = client:receive()
             if receive_status ~= "closed" then
                 if receive then
-                    local table_receive = utils.string_to_table(receive)
-                    print("Receive Client " .. tostring(client) .. " : ", table_receive)
+                    local byte_receive = json.decode(receive)
+                    print("Receive Client " .. tostring(client) .. " : ", byte_receive)
+
+                    local file = io.open("pipe2.txt", "wb")
+                    file:write(byte_receive)
+                    file:close()
 
 
                     -- TODO: Do something
@@ -43,7 +47,7 @@ while true do
 
 
                     local res = {test = "test"}
-                    assert(client:send(utils.table_to_string(res) .. "\n"))
+                    assert(client:send(json.encode(res) .. "\n"))
                 end
             else
                 table.remove(client_tab, conn_count)
