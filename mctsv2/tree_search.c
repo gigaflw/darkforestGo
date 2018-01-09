@@ -1910,7 +1910,7 @@ Move tree_search_pick_best(void *ctx, AllMoves *all_moves, const Board *verify_b
 
   resume_all_threads(s);
 
-  fprintf(stderr,"[ts_v2_pick_best] Ply: %d, move = %s, win_rate = %f [%.2f/%d/%d], score = %.2f\n",
+  fprintf(stderr,"[ts_v2_pick_best] Ply: %d, move = %s, win_rate = %f [%.2f/%d/%d], value = %.2f\n",
       s->board._ply, get_move_str(best_m, player, buf), win_rate, win, total, p->root->data.stats[0].total, best_child->score);
 
   return res;

@@ -2,7 +2,7 @@
 -- Created by HgS_1217_
 -- Date: 2017/11/27
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 21:04:13
+-- @Last Modified time: 2018-01-09 10:19:22
 --
 
 require '_torch_class_patch'
@@ -27,7 +27,7 @@ local opt = pl.lapp[[
     --pipe_path     (default "./pipes")
     --num_attempt   (default 10)            Number of attempt before wait_board gave up and return nil.
     --max_batch     (default 32)
-    --use_dp        (default false)         Whether add to candidate move with default policy
+    --use_dp                                Whether add to candidate move with default policy
     --model_dir     (default './rl.ckpt')   Where to find model file from
     --model         (default 'models/df2.bin')
     --model_type    (default 'df2')        'resnet' | 'df2', how to use the model

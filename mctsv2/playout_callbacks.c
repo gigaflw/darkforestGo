@@ -559,7 +559,7 @@ void threaded_run_bp(ThreadInfo *info, float black_moku, Stone next_player, int 
   // If there is network that predicts moku, then we should combine the results.
   if (b->has_score && s->params.use_cnn_final_score && end_ply >= s->params.min_ply_to_use_cnn_final_score) {
     // Final score = final_mixture_ratio * win_rate_prediction + (1.0 - final_mixture_ratio) * playout_result.
-    float cnn_final_playout = sigmoid(b->score);
+    float cnn_final_playout = b->score;
     black_count = s->params.final_mixture_ratio * cnn_final_playout + (1 - s->params.final_mixture_ratio) * black_count_playout;
   } else {
     black_count = black_count_playout;
