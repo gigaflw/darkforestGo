@@ -420,8 +420,8 @@ Move ts_v2_pick_best(void *ctx, AllMoves *all_moves, const Board *verify_board) 
   endtime2(t)
 
   char buf[100];
-  fprintf(stderr,"[ts_v2_pick_best] Ply: %d, Time elapsed: %lf, move = %s, win_rate = %f [%.2f/%d]\n",
-      s->board._ply, t, get_move_str(move.m, player, buf), move.win_rate, move.win_games, move.total_games);
+  // fprintf(stderr,"[ts_v2_pick_best] Ply: %d, Time elapsed: %lf, move = %s, win_rate = %f [%.2f/%d]\n",
+      // s->board._ply, t, get_move_str(move.m, player, buf), move.win_rate, move.win_games, move.total_games);
   // Change dynkomi if we are winning or losing too much.
   // When win_rate is big and we are black, increase the komi.
   // Suppose we have an initial win_rate of 0.2, then we have -0.3 * alpha for each move we pick.

@@ -1236,7 +1236,7 @@ void ShowBoard(const Board *board, ShowChoice choice) {
     len += sprintf(buf + len, "\n   Ko point = %s [Age = %d]", get_move_str(board->_simple_ko, board->_simple_ko_color, buf2), board->_ko_age);
   }
   // Finally print
-  fprintf(stderr,buf);
+  fprintf(stdout, buf);
 }
 
 static int add_title(char *buf) {

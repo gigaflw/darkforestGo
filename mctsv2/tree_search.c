@@ -1328,7 +1328,7 @@ Coord pick_best(const TreeHandle *s, const TreeBlock *b, Stone player, float *hi
   // get the child_idx that is (1) not empty and (2) is most visited.
   Coord best_m = M_PASS;
   *highest_score = -1.0;
-
+  char buf[30];
   // Return the best move if the tree is empty.
   if (b == TP_NULL || b->n == 0) return best_m;
 
@@ -1352,12 +1352,12 @@ Coord pick_best(const TreeHandle *s, const TreeBlock *b, Stone player, float *hi
     // So the move to be picked could be very random. In this case, we pick the move with the highest cnn_confidence.
     // float score = this_n + s->params.decision_mixture_ratio * n_parent * b->cnn_data.confidences[i]; // * winning_rate;
     float score = this_n;
-    /*
-    if (s->params.verbose >= V_DEBUG) {
-      fprintf(stderr,"[%s]: n = %d, win = %d, winrate = %f, score = %f, cnn_conf = %f\n",
-          get_move_str(m, player), this_n, win, winning_rate, score, bl->cnn_data.confidences[cursor.i]);
-    }
-    */
+
+    // if (s->params.verbose >= V_DEBUG) {
+      fprintf(stderr,"[%s]: n = %d, win = %.2f, winrate = %.2f%%, cnn_conf = %f\n",
+          get_move_str(m, player, buf), this_n - 1, win, winning_rate * 100, b->cnn_data.confidences[i]);
+    // }
+
 
     if (score > *highest_score) {
       *highest_score = score;
@@ -1909,6 +1909,9 @@ Move tree_search_pick_best(void *ctx, AllMoves *all_moves, const Board *verify_b
   Move res = { .x = X(best_m), .y = Y(best_m), .m = best_m, .player = player, .win_rate = win_rate, .win_games = win, .total_games = total};
 
   resume_all_threads(s);
+
+  fprintf(stderr,"[ts_v2_pick_best] Ply: %d, move = %s, win_rate = %f [%.2f/%d/%d], score = %.2f\n",
+      s->board._ply, get_move_str(best_m, player, buf), win_rate, win, total, p->root->data.stats[0].total, best_child->score);
 
   return res;
 }
