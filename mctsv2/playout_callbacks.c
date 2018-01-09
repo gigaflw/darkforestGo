@@ -302,7 +302,7 @@ BOOL dcnn_leaf_expansion(ThreadInfo *info, const Board *board, TreeBlock *b) {
   if (board == NULL) error("Board cannot be null!");
 
   PRINT_DEBUG("About to send to board server.\n");
-  if (s->params.use_async) {
+  if (s->params.use_async && thread_rand(info, 100) <= s->params.percent_async) {
     // Fill the block with fast rollout moves.
     fill_block_with_fast_rollout(s, board, b);
     if (! s->common_params->cpu_only) send_to_cnn(info, b, board);

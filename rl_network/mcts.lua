@@ -1,7 +1,7 @@
 -- @Author: gigaflw
 -- @Date:   2018-01-04 19:40:49
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-05 23:17:44
+-- @Last Modified time: 2018-01-10 03:49:07
 
 local common = require 'common.common'
 local board = require 'board.board'
@@ -76,6 +76,7 @@ local function set_mcts_opt()
     mcts.tree_params.expand_n_thres = OPT.expand_n_thres
     mcts.tree_params.num_virtual_games = OPT.num_virtual_games
     mcts.tree_params.percent_playout_in_expansion = OPT.percent_playout_in_expansion
+    mcts.tree_params.percent_async = OPT.percent_async
 
     mcts.tree_params.default_policy_sample_topn = OPT.default_policy_sample_topn
     mcts.tree_params.default_policy_temperature = OPT.default_policy_temperature

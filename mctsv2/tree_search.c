@@ -510,6 +510,7 @@ void tree_search_init_params(TreeParams *params) {
 
   params->num_virtual_games = 0;
   params->percent_playout_in_expansion = 0;
+  params->percent_async = 0;
   params->num_playout_per_rollout = 1;
   params->use_old_uct = FALSE;
 }
@@ -544,6 +545,7 @@ void tree_search_print_params(void *ctx) {
   fprintf(stderr,"Use pondering: %s\n", STR_BOOL(params->use_pondering));
   fprintf(stderr,"Time limit: %ld\n", params->time_limit);
   fprintf(stderr,"%% of threads running playout when expanding node: %d\n", params->percent_playout_in_expansion);
+  fprintf(stderr,"%% of async expansion: %d\n", params->percent_async);
   if (params->use_cnn_final_score) {
     fprintf(stderr,"Minimal ply for cnn final score: %d\n", params->min_ply_to_use_cnn_final_score);
     fprintf(stderr,"Final mixture ratio: %f\n", params->final_mixture_ratio);

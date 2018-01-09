@@ -205,6 +205,8 @@ typedef struct {
 
   // Whether we use PUCT and previous UCT
   BOOL use_old_uct;
+
+  int percent_async;
 } TreeParams;
 
 #endif

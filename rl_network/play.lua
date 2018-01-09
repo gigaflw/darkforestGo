@@ -1,8 +1,9 @@
 --
+--
 -- Created by HgS_1217_
 -- Date: 2017/12/16
 -- @Last Modified by:   gigaflw
--- @Last Modified time: 2018-01-07 17:22:20
+-- @Last Modified time: 2018-01-10 03:50:28
 --
 local pl = require 'pl.import_into'()
 
@@ -69,6 +70,7 @@ local opt = pl.lapp[[
     *** child node expansion ***
     --expand_n_thres    (default 0)             Statistics collected before expand.
     --use_async                                 Open async model
+    --percent_async     (default 90)            Statistics collected before expand.
     --max_num_move      (default 20)            Maximum number of moves to consider in each tree node.
     --min_num_move      (default 1)             Minimum number of moves to consider in each tree node.
 
